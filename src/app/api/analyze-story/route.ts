@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { parseGeminiJSON } from "@/lib/json-parser";
 import {
@@ -8,7 +8,26 @@ import {
 	storyAnalysisLogger,
 } from "@/lib/logger";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! });
+interface Character {
+	name: string;
+	physicalDescription: string;
+	personality: string;
+	role: string;
+}
+
+interface Setting {
+	timePeriod: string;
+	location: string;
+	mood: string;
+}
+
+interface AnalysisData {
+	characters: Character[];
+	setting: Setting;
+}
+
+const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const model = "gemini-2.5-flash";
 
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
@@ -82,36 +101,69 @@ Please provide:
    - Role in the story
 
 2. Setting description (time period, location, mood)
-
-Format your response as JSON:
-{
-  "characters": [
-    {
-      "name": "Character Name",
-      "physicalDescription": "Detailed physical appearance",
-      "personality": "Key personality traits",
-      "role": "Role in story"
-    }
-  ],
-  "setting": {
-    "timePeriod": "When the story takes place",
-    "location": "Where the story takes place", 
-    "mood": "Overall tone/atmosphere"
-  }
-}
 `;
 
 		storyAnalysisLogger.info(
 			{
-				model: "gemini-2.5-flash",
+				model: model,
 				prompt_length: prompt.length,
 			},
 			"Calling Gemini API for story analysis",
 		);
 
 		const result = await genAI.models.generateContent({
-			model: "gemini-2.5-flash",
+			model: model,
 			contents: prompt,
+			config: {
+				responseMimeType: "application/json",
+				responseSchema: {
+					type: Type.OBJECT,
+					properties: {
+						characters: {
+							type: Type.ARRAY,
+							items: {
+								type: Type.OBJECT,
+								properties: {
+									name: {
+										type: Type.STRING,
+									},
+									physicalDescription: {
+										type: Type.STRING,
+									},
+									personality: {
+										type: Type.STRING,
+									},
+									role: {
+										type: Type.STRING,
+									},
+								},
+								propertyOrdering: [
+									"name",
+									"physicalDescription",
+									"personality",
+									"role",
+								],
+							},
+						},
+						setting: {
+							type: Type.OBJECT,
+							properties: {
+								timePeriod: {
+									type: Type.STRING,
+								},
+								location: {
+									type: Type.STRING,
+								},
+								mood: {
+									type: Type.STRING,
+								},
+							},
+							propertyOrdering: ["timePeriod", "location", "mood"],
+						},
+					},
+					propertyOrdering: ["characters", "setting"],
+				},
+			},
 		});
 		const text = result.text || "";
 
@@ -123,12 +175,12 @@ Format your response as JSON:
 		);
 
 		// Parse JSON response
-		let analysisData: { characters?: Array<unknown>; setting?: unknown };
+		let analysisData: AnalysisData;
 		try {
-			analysisData = parseGeminiJSON(text);
+			analysisData = parseGeminiJSON<AnalysisData>(text);
 			storyAnalysisLogger.info(
 				{
-					characters_count: analysisData.characters?.length || 0,
+					characters_count: analysisData.characters.length,
 					has_setting: !!analysisData.setting,
 				},
 				"Successfully parsed story analysis",
@@ -159,7 +211,7 @@ Format your response as JSON:
 			true,
 			Date.now() - startTime,
 			{
-				characters_count: analysisData.characters?.length || 0,
+				characters_count: analysisData.characters.length,
 				word_count: wordCount,
 			},
 		);

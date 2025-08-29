@@ -1,7 +1,7 @@
 /**
  * Utility function to parse JSON from Gemini responses that might be wrapped in markdown code blocks
  */
-export function parseGeminiJSON(text: string): unknown {
+export function parseGeminiJSON<T = object>(text: string): T {
 	// Remove markdown code block formatting if present
 	let cleanedText = text.trim();
 
@@ -14,12 +14,12 @@ export function parseGeminiJSON(text: string): unknown {
 
 	// Try to parse the cleaned JSON
 	try {
-		return JSON.parse(cleanedText.trim());
+		return JSON.parse(cleanedText.trim()) as T;
 	} catch (error) {
 		// If parsing fails, try to extract JSON from the text
 		const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
 		if (jsonMatch) {
-			return JSON.parse(jsonMatch[0]);
+			return JSON.parse(jsonMatch[0]) as T;
 		}
 		throw error;
 	}

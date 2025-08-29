@@ -7,7 +7,8 @@ import {
 	logError,
 } from "@/lib/logger";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! });
+const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const model = "gemini-2.5-flash-image-preview";
 
 // Helper function to convert base64 to format expected by Gemini
 function prepareImageForGemini(base64Image: string) {
@@ -141,7 +142,7 @@ Generate a single complete comic page image.
 
 		comicPageLogger.info(
 			{
-				model: "gemini-2.5-flash-image-preview",
+				model: model,
 				page_number: page.pageNumber,
 				prompt_length: prompt.length,
 				panel_descriptions_length: panelDescriptions.length,
@@ -153,7 +154,7 @@ Generate a single complete comic page image.
 
 		try {
 			const result = await genAI.models.generateContent({
-				model: "gemini-2.5-flash-image-preview",
+				model: model,
 				contents: inputParts,
 			});
 

@@ -28,7 +28,8 @@
 				"noNonNullAssertion": "off"
 			},
 			"complexity": {
-				"noUselessSwitchCase": "off"
+				"noUselessSwitchCase": "off",
+				"useLiteralKeys": "off"
 			},
 			"performance": {
 				"noImgElement": "off"

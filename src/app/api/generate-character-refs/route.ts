@@ -1,13 +1,14 @@
+import { GoogleGenAI } from "@google/genai";
+import { type NextRequest, NextResponse } from "next/server";
 import {
 	characterGenLogger,
 	logApiRequest,
 	logApiResponse,
 	logError,
 } from "@/lib/logger";
-import { GoogleGenAI } from "@google/genai";
-import { type NextRequest, NextResponse } from "next/server";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! });
+const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const model = "gemini-2.5-flash-image-preview";
 
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
 		characterGenLogger.info(
 			{
-				model: "gemini-2.5-flash-image-preview",
+				model: model,
 				characters_to_generate: characters.length,
 			},
 			"Starting character reference generation",
@@ -93,7 +94,7 @@ The character should be drawn in a neutral pose against a plain background, show
 				);
 
 				const result = await genAI.models.generateContent({
-					model: "gemini-2.5-flash-image-preview",
+					model: model,
 					contents: prompt,
 				});
 

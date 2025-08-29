@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { parseGeminiJSON } from "@/lib/json-parser";
 import {
@@ -8,7 +8,27 @@ import {
 	storyChunkingLogger,
 } from "@/lib/logger";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! });
+interface Panel {
+	panelNumber: number;
+	characters: string[];
+	sceneDescription: string;
+	dialogue: string;
+	cameraAngle: string;
+	visualMood: string;
+}
+
+interface Page {
+	pageNumber: number;
+	panelLayout: string;
+	panels: Panel[];
+}
+
+interface StoryBreakdown {
+	pages: Page[];
+}
+
+const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const model = "gemini-2.5-flash";
 
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
@@ -105,31 +125,11 @@ Create 2-4 pages maximum. For each page, describe:
    - Dialogue (if any)
    - Camera angle (close-up, medium shot, wide shot, etc.)
    - Visual mood/atmosphere
-
-Format as JSON:
-{
-  "pages": [
-    {
-      "pageNumber": 1,
-      "panelLayout": "Description of panel arrangement (e.g., '3 panels - large top panel, two smaller bottom panels')",
-      "panels": [
-        {
-          "panelNumber": 1,
-          "characters": ["Character names present"],
-          "sceneDescription": "Detailed description of what's happening",
-          "dialogue": "Any spoken text or thought bubbles",
-          "cameraAngle": "Shot type and perspective",
-          "visualMood": "Atmosphere and visual style notes"
-        }
-      ]
-    }
-  ]
-}
 `;
 
 		storyChunkingLogger.info(
 			{
-				model: "gemini-2.5-flash",
+				model: model,
 				prompt_length: prompt.length,
 				layout_guidance_type: style,
 			},
@@ -137,8 +137,69 @@ Format as JSON:
 		);
 
 		const result = await genAI.models.generateContent({
-			model: "gemini-2.5-flash",
+			model: model,
 			contents: prompt,
+			config: {
+				responseMimeType: "application/json",
+				responseSchema: {
+					type: Type.OBJECT,
+					properties: {
+						pages: {
+							type: Type.ARRAY,
+							items: {
+								type: Type.OBJECT,
+								properties: {
+									pageNumber: {
+										type: Type.NUMBER,
+									},
+									panelLayout: {
+										type: Type.STRING,
+									},
+									panels: {
+										type: Type.ARRAY,
+										items: {
+											type: Type.OBJECT,
+											properties: {
+												panelNumber: {
+													type: Type.NUMBER,
+												},
+												characters: {
+													type: Type.ARRAY,
+													items: {
+														type: Type.STRING,
+													},
+												},
+												sceneDescription: {
+													type: Type.STRING,
+												},
+												dialogue: {
+													type: Type.STRING,
+												},
+												cameraAngle: {
+													type: Type.STRING,
+												},
+												visualMood: {
+													type: Type.STRING,
+												},
+											},
+											propertyOrdering: [
+												"panelNumber",
+												"characters",
+												"sceneDescription",
+												"dialogue",
+												"cameraAngle",
+												"visualMood",
+											],
+										},
+									},
+								},
+								propertyOrdering: ["pageNumber", "panelLayout", "panels"],
+							},
+						},
+					},
+					propertyOrdering: ["pages"],
+				},
+			},
 		});
 		const text = result.text || "";
 
@@ -150,18 +211,16 @@ Format as JSON:
 		);
 
 		// Parse JSON response
-		let storyBreakdown: { pages?: Array<{ panels?: Array<unknown> }> };
+		let storyBreakdown: StoryBreakdown;
 		try {
-			storyBreakdown = parseGeminiJSON(text);
+			storyBreakdown = parseGeminiJSON<StoryBreakdown>(text);
 			storyChunkingLogger.info(
 				{
-					pages_count: storyBreakdown.pages?.length || 0,
-					total_panels:
-						storyBreakdown.pages?.reduce(
-							(sum: number, page: { panels?: Array<unknown> }) =>
-								sum + (page.panels?.length || 0),
-							0,
-						) || 0,
+					pages_count: storyBreakdown.pages.length,
+					total_panels: storyBreakdown.pages.reduce(
+						(sum, page) => sum + page.panels.length,
+						0,
+					),
 				},
 				"Successfully parsed story breakdown",
 			);
@@ -188,13 +247,11 @@ Format as JSON:
 			true,
 			Date.now() - startTime,
 			{
-				pages_generated: storyBreakdown.pages?.length || 0,
-				total_panels:
-					storyBreakdown.pages?.reduce(
-						(sum: number, page: { panels?: Array<unknown> }) =>
-							sum + (page.panels?.length || 0),
-						0,
-					) || 0,
+				pages_generated: storyBreakdown.pages.length,
+				total_panels: storyBreakdown.pages.reduce(
+					(sum, page) => sum + page.panels.length,
+					0,
+				),
 			},
 		);
 
