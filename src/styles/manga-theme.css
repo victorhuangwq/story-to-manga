@@ -38,6 +38,13 @@
   --font-body-manga: 'M PLUS 1', 'Sawarabi Gothic', sans-serif;
   --font-handwriting-manga: 'Zen Old Mincho', serif;
   
+  /* Manga-specific design elements */
+  --manga-border-traditional: 1px solid var(--manga-black);
+  --manga-shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --manga-radius-minimal: 4px;
+  --manga-accent-red: #D32F2F;
+  --manga-accent-gold: #FF8F00;
+  
   /* Universal */
   --font-mono: 'Courier New', monospace;
 }
@@ -123,23 +130,48 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   font-family: var(--font-body-comic);
 }
 
-/* Typography Overrides - Manga Style */
+/* Typography Overrides - Manga Style (Traditional Japanese Aesthetic) */
 .style-manga h1, .style-manga .h1 {
   font-family: var(--font-display-manga);
   color: var(--manga-black);
-  letter-spacing: 1px;
-  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  line-height: 1.2;
+  position: relative;
 }
 
-.style-manga h2, .style-manga .h2, .style-manga h3, .style-manga .h3 {
+/* Traditional Japanese title styling with accent */
+.style-manga h1::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: var(--manga-accent-red);
+}
+
+.style-manga h2, .style-manga .h2 {
   font-family: var(--font-display-manga);
   color: var(--manga-charcoal);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.01em;
   font-weight: 400;
+  line-height: 1.4;
+  border-left: 3px solid var(--manga-accent-red);
+  padding-left: 12px;
+}
+
+.style-manga h3, .style-manga .h3 {
+  font-family: var(--font-display-manga);
+  color: var(--manga-charcoal);
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
 }
 
 .style-manga .handwriting {
   font-family: var(--font-handwriting-manga);
+  font-weight: 400;
 }
 
 /* Typography Overrides - Comic Style */
@@ -161,8 +193,8 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   font-family: var(--font-handwriting-comic);
 }
 
-/* Comic Book Panel Styles */
-.comic-panel {
+/* Panel Styles - Comic Style (Bold, 3D effect) */
+.style-comic .comic-panel {
   background: var(--manga-white);
   border: var(--comic-border);
   border-radius: var(--comic-radius);
@@ -170,7 +202,7 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   position: relative;
 }
 
-.comic-panel::before {
+.style-comic .comic-panel::before {
   content: '';
   position: absolute;
   top: -2px;
@@ -182,40 +214,106 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   z-index: -1;
 }
 
-/* Buttons - Manga Style */
+/* Panel Styles - Manga Style (Minimalist, Traditional) */
+.style-manga .comic-panel {
+  background: var(--manga-white);
+  border: var(--manga-border-traditional);
+  border-radius: var(--manga-radius-minimal);
+  box-shadow: var(--manga-shadow-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Traditional Japanese paper texture effect */
+.style-manga .comic-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 48%, rgba(0,0,0,0.01) 49%, rgba(0,0,0,0.01) 51%, transparent 52%);
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+/* Traditional tatami-like border accent for manga */
+.style-manga .comic-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--manga-accent-red) 0%, var(--manga-accent-gold) 100%);
+}
+
+/* Buttons - Manga Style (Minimalist, Traditional) */
 .style-manga .btn-manga-primary {
   background: var(--manga-black);
   color: var(--manga-white);
-  border: 2px solid var(--manga-black);
+  border: var(--manga-border-traditional);
   font-family: var(--font-display-manga);
   font-weight: 400;
-  letter-spacing: 0.5px;
-  border-radius: var(--comic-radius);
-  box-shadow: var(--comic-shadow);
-  transition: all 0.3s ease;
+  letter-spacing: 0.02em;
+  border-radius: var(--manga-radius-minimal);
+  box-shadow: var(--manga-shadow-subtle);
+  transition: all 0.2s ease-out;
+  position: relative;
+}
+
+.style-manga .btn-manga-primary::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--manga-accent-red);
+  transition: width 0.3s ease;
 }
 
 .style-manga .btn-manga-primary:hover {
-  background: var(--manga-white);
-  color: var(--manga-black);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  background: var(--manga-charcoal);
+  color: var(--manga-white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.style-manga .btn-manga-primary:hover::after {
+  width: 100%;
 }
 
 .style-manga .btn-manga-outline {
   background: transparent;
   color: var(--manga-black);
-  border: 2px solid var(--manga-black);
+  border: var(--manga-border-traditional);
   font-family: var(--font-display-manga);
   font-weight: 400;
-  letter-spacing: 0.5px;
-  border-radius: var(--comic-radius);
-  transition: all 0.3s ease;
+  letter-spacing: 0.02em;
+  border-radius: var(--manga-radius-minimal);
+  transition: all 0.2s ease-out;
+  position: relative;
+}
+
+.style-manga .btn-manga-outline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: var(--manga-black);
+  transition: width 0.3s ease;
+  z-index: -1;
 }
 
 .style-manga .btn-manga-outline:hover {
-  background: var(--manga-black);
   color: var(--manga-white);
+}
+
+.style-manga .btn-manga-outline:hover::before {
+  width: 100%;
 }
 
 /* Buttons - Comic Style */
@@ -341,31 +439,47 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   border-color: var(--manga-black) !important;
 }
 
-/* Manga Style Accordion */
+/* Manga Style Accordion (Traditional Japanese Design) */
+.style-manga .accordion-manga .accordion-item {
+  border: var(--manga-border-traditional) !important;
+  border-radius: var(--manga-radius-minimal) !important;
+  box-shadow: var(--manga-shadow-subtle) !important;
+  margin-bottom: 0.5rem;
+}
+
 .style-manga .accordion-manga .accordion-button {
-  background: var(--manga-black) !important;
-  color: var(--manga-white) !important;
+  background: var(--manga-white) !important;
+  color: var(--manga-black) !important;
   font-family: var(--font-display-manga);
   font-weight: 400;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
   border: none !important;
-  border-radius: var(--comic-radius) !important;
+  border-radius: var(--manga-radius-minimal) !important;
   box-shadow: none !important;
+  border-left: 3px solid transparent !important;
+  transition: all 0.2s ease !important;
 }
 
 .style-manga .accordion-manga .accordion-button:not(.collapsed) {
-  background: var(--manga-charcoal) !important;
-  color: var(--manga-white) !important;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.125) !important;
+  background: var(--manga-white) !important;
+  color: var(--manga-black) !important;
+  border-left: 3px solid var(--manga-accent-red) !important;
+  box-shadow: inset 0 0 0 1px var(--manga-gray) !important;
 }
 
 .style-manga .accordion-manga .accordion-button::after {
-  filter: invert(1);
+  filter: none;
+  color: var(--manga-charcoal);
 }
 
 .style-manga .accordion-manga .accordion-button:focus {
-  box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.25) !important;
-  border-color: var(--manga-black) !important;
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2) !important;
+  border-color: var(--manga-accent-red) !important;
+}
+
+.style-manga .accordion-manga .accordion-button:hover {
+  background: var(--manga-light-gray) !important;
+  border-left: 3px solid var(--manga-accent-gold) !important;
 }
 
 /* Accordion Body - Universal */
@@ -441,26 +555,52 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   letter-spacing: 0.5px;
 }
 
-/* Form Controls - Manga Style */
+/* Form Controls - Manga Style (Minimalist) */
 .style-manga .form-control-manga {
-  border: 2px solid var(--manga-dark-gray);
-  border-radius: var(--comic-radius);
+  border: var(--manga-border-traditional);
+  border-bottom: 2px solid var(--manga-accent-red);
+  border-radius: var(--manga-radius-minimal);
   font-family: var(--font-body-manga);
   background: var(--manga-white);
   color: var(--manga-charcoal);
+  transition: all 0.2s ease;
 }
 
 .style-manga .form-control-manga:focus {
-  border-color: var(--manga-black);
-  box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.125);
+  border-color: var(--manga-accent-red);
+  border-bottom-color: var(--manga-accent-gold);
+  box-shadow: 0 2px 4px rgba(211, 47, 47, 0.1);
+  outline: none;
 }
 
 .style-manga .form-select-manga {
-  border: 2px solid var(--manga-dark-gray);
-  border-radius: var(--comic-radius);
+  border: var(--manga-border-traditional);
+  border-bottom: 2px solid var(--manga-accent-red);
+  border-radius: var(--manga-radius-minimal);
   font-family: var(--font-body-manga);
   background: var(--manga-white);
   color: var(--manga-charcoal);
+}
+
+/* Manga-specific form labels with traditional styling */
+.style-manga .form-label {
+  color: var(--manga-black) !important;
+  font-family: var(--font-display-manga);
+  font-weight: 400;
+  position: relative;
+  padding-left: 8px;
+}
+
+.style-manga .form-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 12px;
+  background: var(--manga-accent-red);
+  border-radius: 1px;
 }
 
 /* Form Controls - Comic Style */
