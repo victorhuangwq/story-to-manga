@@ -237,8 +237,8 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   pointer-events: none;
 }
 
-/* Traditional tatami-like border accent for manga */
-.style-manga .comic-panel::after {
+/* Traditional tatami-like border accent for manga - only for main panels, not accordion content */
+.style-manga .comic-panel:not(.accordion-manga .comic-panel)::after {
   content: '';
   position: absolute;
   top: 0;
@@ -246,6 +246,11 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, var(--manga-accent-red) 0%, var(--manga-accent-gold) 100%);
+}
+
+/* Remove accent from panels inside accordions to avoid overlap */
+.style-manga .accordion-manga .comic-panel::after {
+  display: none;
 }
 
 /* Buttons - Manga Style (Minimalist, Traditional) */
@@ -445,6 +450,14 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   border-radius: var(--manga-radius-minimal) !important;
   box-shadow: var(--manga-shadow-subtle) !important;
   margin-bottom: 0.5rem;
+  overflow: visible !important;
+  position: relative;
+}
+
+.style-manga .accordion-manga .accordion-header {
+  border-radius: var(--manga-radius-minimal) !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .style-manga .accordion-manga .accordion-button {
@@ -456,14 +469,17 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   border: none !important;
   border-radius: var(--manga-radius-minimal) !important;
   box-shadow: none !important;
-  border-left: 3px solid transparent !important;
   transition: all 0.2s ease !important;
+  position: relative;
+  z-index: 1;
+  padding: 1rem 1.25rem !important;
+  margin: 0 !important;
+  width: 100% !important;
 }
 
 .style-manga .accordion-manga .accordion-button:not(.collapsed) {
   background: var(--manga-white) !important;
   color: var(--manga-black) !important;
-  border-left: 3px solid var(--manga-accent-red) !important;
   box-shadow: inset 0 0 0 1px var(--manga-gray) !important;
 }
 
@@ -474,12 +490,19 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
 
 .style-manga .accordion-manga .accordion-button:focus {
   box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2) !important;
-  border-color: var(--manga-accent-red) !important;
+  z-index: 2;
 }
 
 .style-manga .accordion-manga .accordion-button:hover {
   background: var(--manga-light-gray) !important;
-  border-left: 3px solid var(--manga-accent-gold) !important;
+}
+
+/* Ensure accordion body doesn't interfere with button styling */
+.style-manga .accordion-manga .accordion-body {
+  position: relative;
+  z-index: 0;
+  background: var(--manga-white) !important;
+  border-top: 1px solid var(--manga-light-gray) !important;
 }
 
 /* Accordion Body - Universal */
@@ -533,26 +556,73 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   letter-spacing: 1px;
 }
 
-/* Status Badges */
-.badge-manga-success {
+/* Status Badges - Comic Style */
+.style-comic .badge-manga-success {
   background: var(--manga-success);
   color: var(--manga-white);
-  font-family: var(--font-display);
+  font-family: var(--font-display-comic);
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-.badge-manga-warning {
+.style-comic .badge-manga-warning {
   background: var(--manga-warning);
   color: var(--manga-white);
-  font-family: var(--font-display);
+  font-family: var(--font-display-comic);
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-.badge-manga-info {
+.style-comic .badge-manga-info {
   background: var(--manga-info);
   color: var(--manga-white);
-  font-family: var(--font-display);
+  font-family: var(--font-display-comic);
   letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Status Badges - Manga Style (Minimal) */
+.style-manga .badge-manga-success {
+  background: var(--manga-success);
+  color: var(--manga-white);
+  font-family: var(--font-body-manga);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-radius: var(--manga-radius-minimal);
+  padding: 0.25em 0.5em;
+}
+
+.style-manga .badge-manga-warning {
+  background: var(--manga-light-gray) !important;
+  color: var(--manga-charcoal) !important;
+  border: 1px solid var(--manga-gray) !important;
+  font-family: var(--font-body-manga);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-radius: var(--manga-radius-minimal);
+  padding: 0.25em 0.5em;
+}
+
+.style-manga .badge-manga-info {
+  background: var(--manga-accent-red);
+  color: var(--manga-white);
+  font-family: var(--font-body-manga);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-radius: var(--manga-radius-minimal);
+  padding: 0.25em 0.5em;
+}
+
+/* More specific badge rules to ensure they override Bootstrap */
+.badge-manga-warning {
+  background: var(--manga-warning) !important;
+  color: var(--manga-white) !important;
+}
+
+.style-manga .badge-manga-warning {
+  background: var(--manga-light-gray) !important;
+  color: var(--manga-charcoal) !important;
+  border: 1px solid var(--manga-gray) !important;
 }
 
 /* Form Controls - Manga Style (Minimalist) */
