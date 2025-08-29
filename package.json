@@ -6,10 +6,12 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "bootstrap": "^5.3.3",
     "next": "15.5.2",
     "pino": "^9.9.0",
     "pino-pretty": "^13.1.1",

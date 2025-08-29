@@ -1,37 +1,67 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-
-interface Character {
-  name: string;
-  physicalDescription: string;
-  personality: string;
-  role: string;
-}
-
-interface CharacterReference {
-  name: string;
-  image: string;
-  description: string;
-}
-
-interface ComicPage {
-  pageNumber: number;
-  image: string;
-  panelLayout: string;
-}
+import type { 
+  Character, 
+  CharacterReference, 
+  GeneratedComicPage as ComicPage, 
+  StoryAnalysis,
+  StoryBreakdown,
+  ComicStyle,
+  GenerationStep,
+  StepStatus
+} from '@/types';
 
 export default function Home() {
+  // Main state
   const [story, setStory] = useState('');
-  const [style, setStyle] = useState<'manga' | 'comic'>('manga');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [currentStep, setCurrentStep] = useState('');
-  const [characterRefs, setCharacterRefs] = useState<CharacterReference[]>([]);
-  const [comicPages, setComicPages] = useState<ComicPage[]>([]);
-  const [error, setError] = useState('');
+  const [style, setStyle] = useState<ComicStyle>('manga');
+  const [currentStep, setCurrentStep] = useState<GenerationStep>('idle');
+  const [currentStepText, setCurrentStepText] = useState('');
+
+  // Generated content state
+  const [storyAnalysis, setStoryAnalysis] = useState<StoryAnalysis | null>(null);
+  const [characterReferences, setCharacterReferences] = useState<CharacterReference[]>([]);
+  const [storyBreakdown, setStoryBreakdown] = useState<StoryBreakdown | null>(null);
+  const [generatedPages, setGeneratedPages] = useState<ComicPage[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const wordCount = story.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const isGenerating = currentStep !== 'idle' && currentStep !== 'complete' && currentStep !== 'error';
+
+  // Helper functions for step status
+  const getStepStatus = (step: string): StepStatus => {
+    switch (step) {
+      case 'analysis':
+        return storyAnalysis ? 'completed' : currentStep === 'analyzing' ? 'in-progress' : 'pending';
+      case 'characters':
+        return characterReferences.length > 0 ? 'completed' : currentStep === 'generating-characters' ? 'in-progress' : 'pending';
+      case 'layout':
+        return storyBreakdown ? 'completed' : currentStep === 'chunking' ? 'in-progress' : 'pending';
+      case 'pages':
+        return generatedPages.length > 0 ? 'completed' : currentStep === 'generating-pages' ? 'in-progress' : 'pending';
+      default:
+        return 'pending';
+    }
+  };
+
+  const getStepIcon = (status: StepStatus): string => {
+    switch (status) {
+      case 'completed': return '✅';
+      case 'in-progress': return '🔄';
+      case 'error': return '❌';
+      default: return '⏳';
+    }
+  };
+
+  const getStepBadge = (status: StepStatus): string => {
+    switch (status) {
+      case 'completed': return 'badge-manga-success';
+      case 'in-progress': return 'badge-manga-info';
+      case 'error': return 'badge-manga-danger';
+      default: return 'badge-manga-warning';
+    }
+  };
 
   const generateComic = async () => {
     if (!story.trim()) {
@@ -44,14 +74,17 @@ export default function Home() {
       return;
     }
 
-    setIsGenerating(true);
-    setError('');
-    setCharacterRefs([]);
-    setComicPages([]);
+    // Reset state
+    setCurrentStep('analyzing');
+    setCurrentStepText('Analyzing your story...');
+    setError(null);
+    setStoryAnalysis(null);
+    setCharacterReferences([]);
+    setStoryBreakdown(null);
+    setGeneratedPages([]);
 
     try {
       // Step 1: Analyze story
-      setCurrentStep('Analyzing your story...');
       const analysisResponse = await fetch('/api/analyze-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,9 +96,11 @@ export default function Home() {
       }
 
       const { analysis } = await analysisResponse.json();
+      setStoryAnalysis(analysis);
 
       // Step 2: Generate character references
-      setCurrentStep('Creating character designs...');
+      setCurrentStep('generating-characters');
+      setCurrentStepText('Creating character designs...');
       const charRefResponse = await fetch('/api/generate-character-refs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,10 +116,11 @@ export default function Home() {
       }
 
       const { characterReferences } = await charRefResponse.json();
-      setCharacterRefs(characterReferences);
+      setCharacterReferences(characterReferences);
 
       // Step 3: Break down story into panels
-      setCurrentStep('Planning comic layout...');
+      setCurrentStep('chunking');
+      setCurrentStepText('Planning comic layout...');
       const storyBreakdownResponse = await fetch('/api/chunk-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,13 +136,16 @@ export default function Home() {
         throw new Error('Failed to break down story');
       }
 
-      const { storyBreakdown } = await storyBreakdownResponse.json();
+      const { storyBreakdown: breakdown } = await storyBreakdownResponse.json();
+      setStoryBreakdown(breakdown);
 
       // Step 4: Generate comic pages
+      setCurrentStep('generating-pages');
       const pages: ComicPage[] = [];
-      for (let i = 0; i < storyBreakdown.pages.length; i++) {
-        const page = storyBreakdown.pages[i];
-        setCurrentStep(`Generating comic page ${i + 1}/${storyBreakdown.pages.length}...`);
+      
+      for (let i = 0; i < breakdown.pages.length; i++) {
+        const page = breakdown.pages[i];
+        setCurrentStepText(`Generating comic page ${i + 1}/${breakdown.pages.length}...`);
         
         const pageResponse = await fetch('/api/generate-comic-page', {
           method: 'POST',
@@ -125,16 +164,16 @@ export default function Home() {
 
         const { comicPage } = await pageResponse.json();
         pages.push(comicPage);
-        setComicPages([...pages]);
+        setGeneratedPages([...pages]);
       }
 
-      setCurrentStep('Complete! 🎉');
+      setCurrentStep('complete');
+      setCurrentStepText('Complete! 🎉');
       
     } catch (error) {
       console.error('Generation error:', error);
       setError(error instanceof Error ? error.message : 'Generation failed');
-    } finally {
-      setIsGenerating(false);
+      setCurrentStep('error');
     }
   };
 
@@ -146,143 +185,346 @@ export default function Home() {
   };
 
   const downloadAllPages = () => {
-    comicPages.forEach((page, index) => {
+    generatedPages.forEach((page) => {
       downloadImage(page.image, `comic-page-${page.pageNumber}.jpg`);
     });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="max-w-4xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-            Story to {style === 'manga' ? 'Manga' : 'Comic'} Generator
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Transform your stories into visual masterpieces
-          </p>
-        </header>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Story Style
-            </label>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setStyle('manga')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  style === 'manga' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Japanese Manga
-              </button>
-              <button
-                onClick={() => setStyle('comic')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  style === 'comic' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                American Comic
-              </button>
+    <div className="container-fluid min-vh-100 py-4">
+      <div className="row h-100">
+        {/* Left Panel - Input */}
+        <div className="col-md-4 mb-4">
+          <div className="comic-panel h-100 p-4">
+            <h1 className="h2 text-center mb-4">
+              Story to {style === 'manga' ? 'Manga' : 'Comic'} Generator
+            </h1>
+            
+            {/* Style Selection */}
+            <div className="mb-3">
+              <label className="form-label">Comic Style</label>
+              <div className="btn-group w-100" role="group">
+                <input 
+                  type="radio" 
+                  className="btn-check" 
+                  name="style" 
+                  id="manga" 
+                  checked={style === 'manga'} 
+                  onChange={() => setStyle('manga')}
+                />
+                <label className="btn btn-manga-outline" htmlFor="manga">
+                  Japanese Manga
+                </label>
+                
+                <input 
+                  type="radio" 
+                  className="btn-check" 
+                  name="style" 
+                  id="comic" 
+                  checked={style === 'comic'} 
+                  onChange={() => setStyle('comic')}
+                />
+                <label className="btn btn-manga-outline" htmlFor="comic">
+                  American Comic
+                </label>
+              </div>
             </div>
-          </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Your Story ({wordCount}/500 words)
-            </label>
-            <textarea
-              value={story}
-              onChange={(e) => setStory(e.target.value)}
-              placeholder="Paste your story here... (max 500 words)"
-              className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              disabled={isGenerating}
-            />
-            {wordCount > 500 && (
-              <p className="text-red-500 text-sm mt-1">
-                Story is too long. Please reduce to 500 words or less.
-              </p>
+            {/* Story Input */}
+            <div className="mb-3">
+              <label className="form-label">
+                Your Story <span className="badge bg-secondary">{wordCount}/500 words</span>
+              </label>
+              <textarea
+                className="form-control form-control-manga"
+                rows={8}
+                value={story}
+                onChange={(e) => setStory(e.target.value)}
+                placeholder="Enter your story here... (max 500 words)"
+                disabled={isGenerating}
+              />
+              {wordCount > 500 && (
+                <div className="form-text text-danger">
+                  Story is too long. Please reduce to 500 words or less.
+                </div>
+              )}
+            </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="alert alert-danger" role="alert">
+                <strong>Error:</strong> {error}
+              </div>
             )}
+
+            {/* Generate Button */}
+            <button
+              className="btn btn-manga-primary w-100"
+              onClick={generateComic}
+              disabled={isGenerating || !story.trim() || wordCount > 500}
+            >
+              {isGenerating ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                  {currentStepText}
+                </>
+              ) : (
+                'Generate Comic'
+              )}
+            </button>
           </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={generateComic}
-            disabled={isGenerating || !story.trim() || wordCount > 500}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium py-3 px-6 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isGenerating ? currentStep : 'Generate Comic'}
-          </button>
         </div>
 
-        {/* Character References Display */}
-        {characterRefs.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-              Character Designs
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {characterRefs.map((char, index) => (
-                <div key={index} className="text-center">
-                  <img
-                    src={char.image}
-                    alt={char.name}
-                    className="w-full h-48 object-cover rounded-lg mb-2"
-                  />
-                  <h4 className="font-medium text-gray-800 dark:text-white">{char.name}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{char.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Comic Pages Display */}
-        {comicPages.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
-                Generated Comic Pages
-              </h3>
-              <button
-                onClick={downloadAllPages}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                Download All Pages
-              </button>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {comicPages.map((page) => (
-                <div key={page.pageNumber} className="text-center">
-                  <img
-                    src={page.image}
-                    alt={`Comic Page ${page.pageNumber}`}
-                    className="w-full rounded-lg shadow-md mb-2"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    Page {page.pageNumber}: {page.panelLayout}
-                  </p>
-                  <button
-                    onClick={() => downloadImage(page.image, `comic-page-${page.pageNumber}.jpg`)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+        {/* Right Panel - Generation Results */}
+        <div className="col-md-8">
+          <div className="comic-panel h-100 p-4">
+            <h2 className="h3 mb-4">Behind the Scenes</h2>
+            
+            <div className="accordion accordion-manga" id="generationAccordion">
+              
+              {/* Step 1: Story Analysis */}
+              <div className="accordion-item">
+                <h2 className="accordion-header" id="analysisHeading">
+                  <button 
+                    className="accordion-button" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#analysisCollapse"
                   >
-                    Download
+                    <span className="me-2">{getStepIcon(getStepStatus('analysis'))}</span>
+                    Step 1: Story Analysis
+                    <span className={`badge ${getStepBadge(getStepStatus('analysis'))} ms-auto me-3`}>
+                      {getStepStatus('analysis')}
+                    </span>
                   </button>
+                </h2>
+                <div 
+                  id="analysisCollapse" 
+                  className="accordion-collapse collapse show" 
+                  data-bs-parent="#generationAccordion"
+                >
+                  <div className="accordion-body">
+                    {storyAnalysis ? (
+                      <div>
+                        <h5>Characters:</h5>
+                        <div className="row">
+                          {storyAnalysis.characters.map((char, index) => (
+                            <div key={index} className="col-sm-6 mb-3">
+                              <div className="card card-manga">
+                                <div className="card-body">
+                                  <h6 className="card-title">{char.name}</h6>
+                                  <p className="card-text small">{char.physicalDescription}</p>
+                                  <p className="card-text"><em>{char.role}</em></p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <h5 className="mt-3">Setting:</h5>
+                        <p><strong>Location:</strong> {storyAnalysis.setting.location}</p>
+                        <p><strong>Time Period:</strong> {storyAnalysis.setting.timePeriod}</p>
+                        <p><strong>Mood:</strong> {storyAnalysis.setting.mood}</p>
+                      </div>
+                    ) : (
+                      <p className="text-muted">
+                        {getStepStatus('analysis') === 'in-progress' ? 
+                          'Analyzing your story to extract characters, setting, and themes...' : 
+                          'Story analysis will appear here once generation begins.'
+                        }
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Step 2: Character Designs */}
+              <div className="accordion-item">
+                <h2 className="accordion-header" id="charactersHeading">
+                  <button 
+                    className="accordion-button collapsed" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#charactersCollapse"
+                  >
+                    <span className="me-2">{getStepIcon(getStepStatus('characters'))}</span>
+                    Step 2: Character Designs
+                    <span className={`badge ${getStepBadge(getStepStatus('characters'))} ms-auto me-3`}>
+                      {getStepStatus('characters')}
+                    </span>
+                  </button>
+                </h2>
+                <div 
+                  id="charactersCollapse" 
+                  className="accordion-collapse collapse" 
+                  data-bs-parent="#generationAccordion"
+                >
+                  <div className="accordion-body">
+                    {characterReferences.length > 0 ? (
+                      <div className="character-grid">
+                        <div className="row">
+                          {characterReferences.map((char, index) => (
+                            <div key={index} className="col-sm-6 col-lg-4 mb-3">
+                              <div className="text-center">
+                                <img 
+                                  src={char.image} 
+                                  alt={char.name}
+                                  className="img-fluid rounded mb-2"
+                                  style={{ height: '200px', objectFit: 'cover' }}
+                                />
+                                <h6>{char.name}</h6>
+                                <p className="small text-muted">{char.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted">
+                        {getStepStatus('characters') === 'in-progress' ? 
+                          'Creating character reference images to maintain visual consistency...' : 
+                          'Character design images will appear here after story analysis.'
+                        }
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Comic Layout Plan */}
+              <div className="accordion-item">
+                <h2 className="accordion-header" id="layoutHeading">
+                  <button 
+                    className="accordion-button collapsed" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#layoutCollapse"
+                  >
+                    <span className="me-2">{getStepIcon(getStepStatus('layout'))}</span>
+                    Step 3: Comic Layout Plan
+                    <span className={`badge ${getStepBadge(getStepStatus('layout'))} ms-auto me-3`}>
+                      {getStepStatus('layout')}
+                    </span>
+                  </button>
+                </h2>
+                <div 
+                  id="layoutCollapse" 
+                  className="accordion-collapse collapse" 
+                  data-bs-parent="#generationAccordion"
+                >
+                  <div className="accordion-body">
+                    {storyBreakdown ? (
+                      <div>
+                        {storyBreakdown.pages.map((page, pageIndex) => (
+                          <div key={pageIndex} className="mb-4">
+                            <h5>Page {page.pageNumber}</h5>
+                            <p><strong>Layout:</strong> {page.panelLayout}</p>
+                            <div className="row">
+                              {page.panels.map((panel, panelIndex) => (
+                                <div key={panelIndex} className="col-sm-6 mb-3">
+                                  <div className="card card-manga">
+                                    <div className="card-body">
+                                      <h6 className="card-title">Panel {panel.panelNumber}</h6>
+                                      <p className="card-text small">{panel.sceneDescription}</p>
+                                      {panel.dialogue && (
+                                        <p className="card-text speech-bubble small">
+                                          "{panel.dialogue}"
+                                        </p>
+                                      )}
+                                      <div className="small text-muted">
+                                        <div><strong>Characters:</strong> {panel.characters.join(', ')}</div>
+                                        <div><strong>Camera:</strong> {panel.cameraAngle}</div>
+                                        <div><strong>Mood:</strong> {panel.visualMood}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted">
+                        {getStepStatus('layout') === 'in-progress' ? 
+                          'Breaking down your story into comic panels and pages...' : 
+                          'Comic layout plan will appear here after character designs are complete.'
+                        }
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4: Generated Pages */}
+              <div className="accordion-item">
+                <h2 className="accordion-header" id="pagesHeading">
+                  <button 
+                    className="accordion-button collapsed" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#pagesCollapse"
+                  >
+                    <span className="me-2">{getStepIcon(getStepStatus('pages'))}</span>
+                    Step 4: Generated Pages
+                    <span className={`badge ${getStepBadge(getStepStatus('pages'))} ms-auto me-3`}>
+                      {getStepStatus('pages')}
+                    </span>
+                  </button>
+                </h2>
+                <div 
+                  id="pagesCollapse" 
+                  className="accordion-collapse collapse" 
+                  data-bs-parent="#generationAccordion"
+                >
+                  <div className="accordion-body">
+                    {generatedPages.length > 0 ? (
+                      <div>
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <h5>Your Comic Pages</h5>
+                          <button 
+                            className="btn btn-manga-primary"
+                            onClick={downloadAllPages}
+                          >
+                            Download All Pages
+                          </button>
+                        </div>
+                        <div className="row">
+                          {generatedPages.map((page) => (
+                            <div key={page.pageNumber} className="col-lg-6 mb-4">
+                              <div className="text-center">
+                                <img 
+                                  src={page.image} 
+                                  alt={`Comic Page ${page.pageNumber}`}
+                                  className="img-fluid rounded comic-panel mb-2"
+                                />
+                                <h6>Page {page.pageNumber}</h6>
+                                <p className="small text-muted mb-2">{page.panelLayout}</p>
+                                <button
+                                  className="btn btn-manga-outline btn-sm"
+                                  onClick={() => downloadImage(page.image, `comic-page-${page.pageNumber}.jpg`)}
+                                >
+                                  Download Page
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted">
+                        {getStepStatus('pages') === 'in-progress' ? 
+                          'Generating comic pages using character references and layout plan...' : 
+                          'Your finished comic pages will appear here!'
+                        }
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
