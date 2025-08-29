@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { storyAnalysisLogger, logApiRequest, logApiResponse, logError } from '@/lib/logger';
+import { parseGeminiJSON } from '@/lib/json-parser';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
 Analyze this story and extract the main characters with their detailed characteristics:
@@ -77,7 +78,7 @@ Format your response as JSON:
 `;
 
     storyAnalysisLogger.info({ 
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       prompt_length: prompt.length 
     }, 'Calling Gemini API for story analysis');
 
@@ -92,14 +93,14 @@ Format your response as JSON:
     // Parse JSON response
     let analysisData;
     try {
-      analysisData = JSON.parse(text);
+      analysisData = parseGeminiJSON(text);
       storyAnalysisLogger.info({ 
         characters_count: analysisData.characters?.length || 0,
         has_setting: !!analysisData.setting 
       }, 'Successfully parsed story analysis');
     } catch (parseError) {
-      logError(storyAnalysisLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 500) });
-      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'JSON parsing failed' });
+      logError(storyAnalysisLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 1000) });
+      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'JSON parsing failed', response_preview: text.substring(0, 200) });
       return NextResponse.json(
         { error: 'Failed to parse story analysis' },
         { status: 500 }

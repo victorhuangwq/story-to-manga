@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { storyChunkingLogger, logApiRequest, logApiResponse, logError } from '@/lib/logger';
+import { parseGeminiJSON } from '@/lib/json-parser';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const characterNames = characters.map((c: any) => c.name).join(', ');
     
@@ -106,7 +107,7 @@ Format as JSON:
 `;
 
     storyChunkingLogger.info({ 
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       prompt_length: prompt.length,
       layout_guidance_type: style 
     }, 'Calling Gemini API for story chunking');
@@ -122,13 +123,13 @@ Format as JSON:
     // Parse JSON response
     let storyBreakdown;
     try {
-      storyBreakdown = JSON.parse(text);
+      storyBreakdown = parseGeminiJSON(text);
       storyChunkingLogger.info({ 
         pages_count: storyBreakdown.pages?.length || 0,
         total_panels: storyBreakdown.pages?.reduce((sum: number, page: any) => sum + (page.panels?.length || 0), 0) || 0
       }, 'Successfully parsed story breakdown');
     } catch (parseError) {
-      logError(storyChunkingLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 500) });
+      logError(storyChunkingLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 1000) });
       logApiResponse(storyChunkingLogger, endpoint, false, Date.now() - startTime, { error: 'JSON parsing failed' });
       return NextResponse.json(
         { error: 'Failed to parse story breakdown' },
