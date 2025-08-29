@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { comicPageLogger, logApiRequest, logApiResponse, logError } from '@/lib/logger';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -16,10 +17,29 @@ function prepareImageForGemini(base64Image: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const endpoint = '/api/generate-comic-page';
+  
+  logApiRequest(comicPageLogger, endpoint);
+
   try {
     const { page, characterReferences, setting, style } = await request.json();
 
+    comicPageLogger.debug({ 
+      page_number: page?.pageNumber,
+      panels_count: page?.panels?.length || 0,
+      character_refs_count: characterReferences?.length || 0,
+      style
+    }, 'Received comic page generation request');
+
     if (!page || !characterReferences || !setting || !style) {
+      comicPageLogger.warn({ 
+        page: !!page, 
+        characterReferences: !!characterReferences, 
+        setting: !!setting, 
+        style: !!style 
+      }, 'Missing required parameters');
+      logApiResponse(comicPageLogger, endpoint, false, Date.now() - startTime, { error: 'Missing parameters' });
       return NextResponse.json(
         { error: 'Page, character references, setting, and style are required' },
         { status: 400 }
@@ -35,6 +55,12 @@ export async function POST(request: NextRequest) {
       : 'American comic book style, full color, clean line art, left-to-right reading flow';
 
     // Create detailed panel descriptions
+    comicPageLogger.debug({ 
+      page_number: page.pageNumber,
+      panel_layout: page.panelLayout,
+      style_prefix: stylePrefix.substring(0, 50) + '...'
+    }, 'Processing panel descriptions');
+
     const panelDescriptions = page.panels.map((panel: any, index: number) => {
       const charactersInPanel = panel.characters.map((charName: string) => {
         const charRef = characterReferences.find((ref: any) => ref.name === charName);
@@ -76,9 +102,22 @@ Generate a single complete comic page image.
       }
     });
 
+    comicPageLogger.info({ 
+      model: 'gemini-2.5-flash-image-preview',
+      page_number: page.pageNumber,
+      prompt_length: prompt.length,
+      panel_descriptions_length: panelDescriptions.length,
+      character_refs_attached: characterReferences.length,
+      input_parts_count: inputParts.length
+    }, 'Calling Gemini API for comic page generation');
+
     try {
       const result = await model.generateContent(inputParts);
       const response = result.response;
+      
+      comicPageLogger.debug({ 
+        page_number: page.pageNumber
+      }, 'Received response from Gemini API');
       
       // Get the image data
       const imageData = response.candidates?.[0]?.content?.parts?.[0];
@@ -86,6 +125,19 @@ Generate a single complete comic page image.
       if (imageData && 'inlineData' in imageData) {
         const base64Image = imageData.inlineData?.data;
         const mimeType = imageData.inlineData?.mimeType || 'image/jpeg';
+        
+        comicPageLogger.info({ 
+          page_number: page.pageNumber,
+          mime_type: mimeType,
+          image_size_kb: Math.round(base64Image.length * 0.75 / 1024),
+          duration_ms: Date.now() - startTime
+        }, 'Successfully generated comic page');
+
+        logApiResponse(comicPageLogger, endpoint, true, Date.now() - startTime, { 
+          page_number: page.pageNumber,
+          panels_count: page.panels?.length || 0,
+          image_size_kb: Math.round(base64Image.length * 0.75 / 1024)
+        });
         
         return NextResponse.json({
           success: true,
@@ -99,7 +151,14 @@ Generate a single complete comic page image.
         throw new Error('No image data received');
       }
     } catch (error) {
-      console.error('Failed to generate comic page:', error);
+      logError(comicPageLogger, error, 'comic page generation', { 
+        page_number: page.pageNumber,
+        duration_ms: Date.now() - startTime
+      });
+      logApiResponse(comicPageLogger, endpoint, false, Date.now() - startTime, { 
+        error: 'Comic page generation failed',
+        page_number: page.pageNumber
+      });
       return NextResponse.json(
         { error: `Failed to generate comic page ${page.pageNumber}` },
         { status: 500 }
@@ -107,7 +166,8 @@ Generate a single complete comic page image.
     }
 
   } catch (error) {
-    console.error('Comic page generation error:', error);
+    logError(comicPageLogger, error, 'comic page generation');
+    logApiResponse(comicPageLogger, endpoint, false, Date.now() - startTime, { error: 'Unexpected error' });
     return NextResponse.json(
       { error: 'Failed to generate comic page' },
       { status: 500 }

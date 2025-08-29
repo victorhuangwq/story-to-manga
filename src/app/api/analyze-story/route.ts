@@ -1,13 +1,26 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { storyAnalysisLogger, logApiRequest, logApiResponse, logError } from '@/lib/logger';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const endpoint = '/api/analyze-story';
+  
+  logApiRequest(storyAnalysisLogger, endpoint);
+
   try {
     const { story, style } = await request.json();
 
+    storyAnalysisLogger.debug({ 
+      story_length: story?.length || 0, 
+      style 
+    }, 'Received story analysis request');
+
     if (!story || !style) {
+      storyAnalysisLogger.warn({ story: !!story, style: !!style }, 'Missing required parameters');
+      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'Missing parameters' });
       return NextResponse.json(
         { error: 'Story and style are required' },
         { status: 400 }
@@ -16,7 +29,11 @@ export async function POST(request: NextRequest) {
 
     // Validate story length (500 words max)
     const wordCount = story.trim().split(/\s+/).length;
+    storyAnalysisLogger.debug({ wordCount }, 'Calculated word count');
+    
     if (wordCount > 500) {
+      storyAnalysisLogger.warn({ wordCount, limit: 500 }, 'Story exceeds word limit');
+      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'Word limit exceeded' });
       return NextResponse.json(
         { error: `Story too long. Maximum 500 words, got ${wordCount} words.` },
         { status: 400 }
@@ -59,21 +76,40 @@ Format your response as JSON:
 }
 `;
 
+    storyAnalysisLogger.info({ 
+      model: 'gemini-2.0-flash-exp',
+      prompt_length: prompt.length 
+    }, 'Calling Gemini API for story analysis');
+
     const result = await model.generateContent(prompt);
     const response = result.response;
     const text = response.text();
+
+    storyAnalysisLogger.debug({ 
+      response_length: text.length 
+    }, 'Received response from Gemini API');
 
     // Parse JSON response
     let analysisData;
     try {
       analysisData = JSON.parse(text);
+      storyAnalysisLogger.info({ 
+        characters_count: analysisData.characters?.length || 0,
+        has_setting: !!analysisData.setting 
+      }, 'Successfully parsed story analysis');
     } catch (parseError) {
-      console.error('Failed to parse JSON:', text);
+      logError(storyAnalysisLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 500) });
+      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'JSON parsing failed' });
       return NextResponse.json(
         { error: 'Failed to parse story analysis' },
         { status: 500 }
       );
     }
+
+    logApiResponse(storyAnalysisLogger, endpoint, true, Date.now() - startTime, { 
+      characters_count: analysisData.characters?.length || 0,
+      word_count: wordCount 
+    });
 
     return NextResponse.json({
       success: true,
@@ -82,7 +118,8 @@ Format your response as JSON:
     });
 
   } catch (error) {
-    console.error('Story analysis error:', error);
+    logError(storyAnalysisLogger, error, 'story analysis');
+    logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'Unexpected error' });
     return NextResponse.json(
       { error: 'Failed to analyze story' },
       { status: 500 }

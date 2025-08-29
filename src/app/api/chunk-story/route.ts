@@ -1,13 +1,33 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { storyChunkingLogger, logApiRequest, logApiResponse, logError } from '@/lib/logger';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const endpoint = '/api/chunk-story';
+  
+  logApiRequest(storyChunkingLogger, endpoint);
+
   try {
     const { story, characters, setting, style } = await request.json();
 
+    storyChunkingLogger.debug({ 
+      story_length: story?.length || 0,
+      characters_count: characters?.length || 0,
+      style,
+      setting: !!setting
+    }, 'Received story chunking request');
+
     if (!story || !characters || !setting || !style) {
+      storyChunkingLogger.warn({ 
+        story: !!story, 
+        characters: !!characters, 
+        setting: !!setting, 
+        style: !!style 
+      }, 'Missing required parameters');
+      logApiResponse(storyChunkingLogger, endpoint, false, Date.now() - startTime, { error: 'Missing parameters' });
       return NextResponse.json(
         { error: 'Story, characters, setting, and style are required' },
         { status: 400 }
@@ -17,6 +37,11 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
     const characterNames = characters.map((c: any) => c.name).join(', ');
+    
+    storyChunkingLogger.debug({ 
+      character_names: characterNames,
+      layout_style: style 
+    }, 'Extracted character names and determined layout style');
     
     const layoutGuidance = style === 'manga' 
       ? `
@@ -80,21 +105,41 @@ Format as JSON:
 }
 `;
 
+    storyChunkingLogger.info({ 
+      model: 'gemini-2.0-flash-exp',
+      prompt_length: prompt.length,
+      layout_guidance_type: style 
+    }, 'Calling Gemini API for story chunking');
+
     const result = await model.generateContent(prompt);
     const response = result.response;
     const text = response.text();
+
+    storyChunkingLogger.debug({ 
+      response_length: text.length 
+    }, 'Received response from Gemini API');
 
     // Parse JSON response
     let storyBreakdown;
     try {
       storyBreakdown = JSON.parse(text);
+      storyChunkingLogger.info({ 
+        pages_count: storyBreakdown.pages?.length || 0,
+        total_panels: storyBreakdown.pages?.reduce((sum: number, page: any) => sum + (page.panels?.length || 0), 0) || 0
+      }, 'Successfully parsed story breakdown');
     } catch (parseError) {
-      console.error('Failed to parse JSON:', text);
+      logError(storyChunkingLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 500) });
+      logApiResponse(storyChunkingLogger, endpoint, false, Date.now() - startTime, { error: 'JSON parsing failed' });
       return NextResponse.json(
         { error: 'Failed to parse story breakdown' },
         { status: 500 }
       );
     }
+
+    logApiResponse(storyChunkingLogger, endpoint, true, Date.now() - startTime, { 
+      pages_generated: storyBreakdown.pages?.length || 0,
+      total_panels: storyBreakdown.pages?.reduce((sum: number, page: any) => sum + (page.panels?.length || 0), 0) || 0
+    });
 
     return NextResponse.json({
       success: true,
@@ -102,7 +147,8 @@ Format as JSON:
     });
 
   } catch (error) {
-    console.error('Story chunking error:', error);
+    logError(storyChunkingLogger, error, 'story chunking');
+    logApiResponse(storyChunkingLogger, endpoint, false, Date.now() - startTime, { error: 'Unexpected error' });
     return NextResponse.json(
       { error: 'Failed to chunk story' },
       { status: 500 }
