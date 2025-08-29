@@ -21,7 +21,7 @@ Transform your written stories into visual manga or comic book pages using Googl
 ### 1. Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. Get Google AI API Key
@@ -46,7 +46,7 @@ GOOGLE_AI_API_KEY=your_actual_api_key_here
 ### 4. Run Development Server
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.

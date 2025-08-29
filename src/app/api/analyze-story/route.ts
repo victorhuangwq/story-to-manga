@@ -1,49 +1,73 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { NextRequest, NextResponse } from 'next/server';
-import { storyAnalysisLogger, logApiRequest, logApiResponse, logError } from '@/lib/logger';
-import { parseGeminiJSON } from '@/lib/json-parser';
+import { GoogleGenAI } from "@google/genai";
+import { type NextRequest, NextResponse } from "next/server";
+import { parseGeminiJSON } from "@/lib/json-parser";
+import {
+	logApiRequest,
+	logApiResponse,
+	logError,
+	storyAnalysisLogger,
+} from "@/lib/logger";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! });
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  const endpoint = '/api/analyze-story';
-  
-  logApiRequest(storyAnalysisLogger, endpoint);
+	const startTime = Date.now();
+	const endpoint = "/api/analyze-story";
 
-  try {
-    const { story, style } = await request.json();
+	logApiRequest(storyAnalysisLogger, endpoint);
 
-    storyAnalysisLogger.debug({ 
-      story_length: story?.length || 0, 
-      style 
-    }, 'Received story analysis request');
+	try {
+		const { story, style } = await request.json();
 
-    if (!story || !style) {
-      storyAnalysisLogger.warn({ story: !!story, style: !!style }, 'Missing required parameters');
-      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'Missing parameters' });
-      return NextResponse.json(
-        { error: 'Story and style are required' },
-        { status: 400 }
-      );
-    }
+		storyAnalysisLogger.debug(
+			{
+				story_length: story?.length || 0,
+				style,
+			},
+			"Received story analysis request",
+		);
 
-    // Validate story length (500 words max)
-    const wordCount = story.trim().split(/\s+/).length;
-    storyAnalysisLogger.debug({ wordCount }, 'Calculated word count');
-    
-    if (wordCount > 500) {
-      storyAnalysisLogger.warn({ wordCount, limit: 500 }, 'Story exceeds word limit');
-      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'Word limit exceeded' });
-      return NextResponse.json(
-        { error: `Story too long. Maximum 500 words, got ${wordCount} words.` },
-        { status: 400 }
-      );
-    }
+		if (!story || !style) {
+			storyAnalysisLogger.warn(
+				{ story: !!story, style: !!style },
+				"Missing required parameters",
+			);
+			logApiResponse(
+				storyAnalysisLogger,
+				endpoint,
+				false,
+				Date.now() - startTime,
+				{ error: "Missing parameters" },
+			);
+			return NextResponse.json(
+				{ error: "Story and style are required" },
+				{ status: 400 },
+			);
+		}
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+		// Validate story length (500 words max)
+		const wordCount = story.trim().split(/\s+/).length;
+		storyAnalysisLogger.debug({ wordCount }, "Calculated word count");
 
-    const prompt = `
+		if (wordCount > 500) {
+			storyAnalysisLogger.warn(
+				{ wordCount, limit: 500 },
+				"Story exceeds word limit",
+			);
+			logApiResponse(
+				storyAnalysisLogger,
+				endpoint,
+				false,
+				Date.now() - startTime,
+				{ error: "Word limit exceeded" },
+			);
+			return NextResponse.json(
+				{ error: `Story too long. Maximum 500 words, got ${wordCount} words.` },
+				{ status: 400 },
+			);
+		}
+
+		const prompt = `
 Analyze this story and extract the main characters with their detailed characteristics:
 
 Story: "${story}"
@@ -77,53 +101,86 @@ Format your response as JSON:
 }
 `;
 
-    storyAnalysisLogger.info({ 
-      model: 'gemini-2.5-flash',
-      prompt_length: prompt.length 
-    }, 'Calling Gemini API for story analysis');
+		storyAnalysisLogger.info(
+			{
+				model: "gemini-2.5-flash",
+				prompt_length: prompt.length,
+			},
+			"Calling Gemini API for story analysis",
+		);
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+		const result = await genAI.models.generateContent({
+			model: "gemini-2.5-flash",
+			contents: prompt,
+		});
+		const text = result.text || "";
 
-    storyAnalysisLogger.debug({ 
-      response_length: text.length 
-    }, 'Received response from Gemini API');
+		storyAnalysisLogger.debug(
+			{
+				response_length: text.length,
+			},
+			"Received response from Gemini API",
+		);
 
-    // Parse JSON response
-    let analysisData;
-    try {
-      analysisData = parseGeminiJSON(text);
-      storyAnalysisLogger.info({ 
-        characters_count: analysisData.characters?.length || 0,
-        has_setting: !!analysisData.setting 
-      }, 'Successfully parsed story analysis');
-    } catch (parseError) {
-      logError(storyAnalysisLogger, parseError, 'JSON parsing', { response_text: text.substring(0, 1000) });
-      logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'JSON parsing failed', response_preview: text.substring(0, 200) });
-      return NextResponse.json(
-        { error: 'Failed to parse story analysis' },
-        { status: 500 }
-      );
-    }
+		// Parse JSON response
+		let analysisData: { characters?: Array<unknown>; setting?: unknown };
+		try {
+			analysisData = parseGeminiJSON(text);
+			storyAnalysisLogger.info(
+				{
+					characters_count: analysisData.characters?.length || 0,
+					has_setting: !!analysisData.setting,
+				},
+				"Successfully parsed story analysis",
+			);
+		} catch (parseError) {
+			logError(storyAnalysisLogger, parseError, "JSON parsing", {
+				response_text: text?.substring(0, 1000),
+			});
+			logApiResponse(
+				storyAnalysisLogger,
+				endpoint,
+				false,
+				Date.now() - startTime,
+				{
+					error: "JSON parsing failed",
+					response_preview: text?.substring(0, 200),
+				},
+			);
+			return NextResponse.json(
+				{ error: "Failed to parse story analysis" },
+				{ status: 500 },
+			);
+		}
 
-    logApiResponse(storyAnalysisLogger, endpoint, true, Date.now() - startTime, { 
-      characters_count: analysisData.characters?.length || 0,
-      word_count: wordCount 
-    });
+		logApiResponse(
+			storyAnalysisLogger,
+			endpoint,
+			true,
+			Date.now() - startTime,
+			{
+				characters_count: analysisData.characters?.length || 0,
+				word_count: wordCount,
+			},
+		);
 
-    return NextResponse.json({
-      success: true,
-      analysis: analysisData,
-      wordCount
-    });
-
-  } catch (error) {
-    logError(storyAnalysisLogger, error, 'story analysis');
-    logApiResponse(storyAnalysisLogger, endpoint, false, Date.now() - startTime, { error: 'Unexpected error' });
-    return NextResponse.json(
-      { error: 'Failed to analyze story' },
-      { status: 500 }
-    );
-  }
+		return NextResponse.json({
+			success: true,
+			analysis: analysisData,
+			wordCount,
+		});
+	} catch (error) {
+		logError(storyAnalysisLogger, error, "story analysis");
+		logApiResponse(
+			storyAnalysisLogger,
+			endpoint,
+			false,
+			Date.now() - startTime,
+			{ error: "Unexpected error" },
+		);
+		return NextResponse.json(
+			{ error: "Failed to analyze story" },
+			{ status: 500 },
+		);
+	}
 }
