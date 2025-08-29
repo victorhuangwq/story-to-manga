@@ -531,18 +531,21 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   transition: all 0.15s ease-in-out;
 }
 
-/* Ensure all nested elements have proper colors and visibility */
-.accordion-manga .accordion-body *:not(.text-muted) {
-  color: inherit !important;
-  opacity: 1 !important;
-  visibility: visible !important;
+/* Ensure all nested elements have proper colors and visibility using specificity */
+.style-manga .accordion-manga .accordion-body *:not(.text-muted),
+.style-comic .accordion-manga .accordion-body *:not(.text-muted) {
+  color: inherit;
+  opacity: 1;
+  visibility: visible;
 }
 
-.accordion-manga .accordion-body .text-muted,
-.accordion-manga .accordion-body .text-muted * {
-  color: var(--manga-medium-gray) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
+.style-manga .accordion-manga .accordion-body .text-muted,
+.style-manga .accordion-manga .accordion-body .text-muted *,
+.style-comic .accordion-manga .accordion-body .text-muted,
+.style-comic .accordion-manga .accordion-body .text-muted * {
+  color: var(--manga-medium-gray);
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Progress Indicators */
