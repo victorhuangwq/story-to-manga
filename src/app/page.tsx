@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import type { 
-  Character, 
   CharacterReference, 
   GeneratedComicPage as ComicPage, 
   StoryAnalysis,
@@ -191,7 +190,7 @@ export default function Home() {
   };
 
   return (
-    <div className="container-fluid min-vh-100 py-4">
+    <div className={`container-fluid min-vh-100 py-4 style-${style}`}>
       <div className="row h-100">
         {/* Left Panel - Input */}
         <div className="col-md-4 mb-4">
