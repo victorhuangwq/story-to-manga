@@ -6,16 +6,14 @@ import type {
   GeneratedComicPage as ComicPage, 
   StoryAnalysis,
   StoryBreakdown,
-  ComicStyle,
-  GenerationStep,
-  StepStatus
+  ComicStyle
 } from '@/types';
 
 export default function Home() {
   // Main state
   const [story, setStory] = useState('');
   const [style, setStyle] = useState<ComicStyle>('manga');
-  const [currentStep, setCurrentStep] = useState<GenerationStep>('idle');
+  const [isGenerating, setIsGenerating] = useState(false);
   const [currentStepText, setCurrentStepText] = useState('');
 
   // Generated content state
@@ -26,41 +24,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const wordCount = story.trim().split(/\s+/).filter(word => word.length > 0).length;
-  const isGenerating = currentStep !== 'idle' && currentStep !== 'complete' && currentStep !== 'error';
-
-  // Helper functions for step status
-  const getStepStatus = (step: string): StepStatus => {
-    switch (step) {
-      case 'analysis':
-        return storyAnalysis ? 'completed' : currentStep === 'analyzing' ? 'in-progress' : 'pending';
-      case 'characters':
-        return characterReferences.length > 0 ? 'completed' : currentStep === 'generating-characters' ? 'in-progress' : 'pending';
-      case 'layout':
-        return storyBreakdown ? 'completed' : currentStep === 'chunking' ? 'in-progress' : 'pending';
-      case 'pages':
-        return generatedPages.length > 0 ? 'completed' : currentStep === 'generating-pages' ? 'in-progress' : 'pending';
-      default:
-        return 'pending';
-    }
-  };
-
-  const getStepIcon = (status: StepStatus): string => {
-    switch (status) {
-      case 'completed': return '✅';
-      case 'in-progress': return '🔄';
-      case 'error': return '❌';
-      default: return '⏳';
-    }
-  };
-
-  const getStepBadge = (status: StepStatus): string => {
-    switch (status) {
-      case 'completed': return 'badge-manga-success';
-      case 'in-progress': return 'badge-manga-info';
-      case 'error': return 'badge-manga-danger';
-      default: return 'badge-manga-warning';
-    }
-  };
 
   const generateComic = async () => {
     if (!story.trim()) {
@@ -73,14 +36,10 @@ export default function Home() {
       return;
     }
 
-    // Reset state
-    setCurrentStep('analyzing');
+    // Only reset error and set generating state - keep existing content visible
+    setIsGenerating(true);
     setCurrentStepText('Analyzing your story...');
     setError(null);
-    setStoryAnalysis(null);
-    setCharacterReferences([]);
-    setStoryBreakdown(null);
-    setGeneratedPages([]);
 
     try {
       // Step 1: Analyze story
@@ -98,7 +57,6 @@ export default function Home() {
       setStoryAnalysis(analysis);
 
       // Step 2: Generate character references
-      setCurrentStep('generating-characters');
       setCurrentStepText('Creating character designs...');
       const charRefResponse = await fetch('/api/generate-character-refs', {
         method: 'POST',
@@ -118,7 +76,6 @@ export default function Home() {
       setCharacterReferences(characterReferences);
 
       // Step 3: Break down story into panels
-      setCurrentStep('chunking');
       setCurrentStepText('Planning comic layout...');
       const storyBreakdownResponse = await fetch('/api/chunk-story', {
         method: 'POST',
@@ -139,7 +96,6 @@ export default function Home() {
       setStoryBreakdown(breakdown);
 
       // Step 4: Generate comic pages
-      setCurrentStep('generating-pages');
       const pages: ComicPage[] = [];
       
       for (let i = 0; i < breakdown.pages.length; i++) {
@@ -166,13 +122,13 @@ export default function Home() {
         setGeneratedPages([...pages]);
       }
 
-      setCurrentStep('complete');
       setCurrentStepText('Complete! 🎉');
+      setIsGenerating(false);
       
     } catch (error) {
       console.error('Generation error:', error);
       setError(error instanceof Error ? error.message : 'Generation failed');
-      setCurrentStep('error');
+      setIsGenerating(false);
     }
   };
 
@@ -187,6 +143,14 @@ export default function Home() {
     generatedPages.forEach((page) => {
       downloadImage(page.image, `comic-page-${page.pageNumber}.jpg`);
     });
+  };
+
+  const clearResults = () => {
+    setStoryAnalysis(null);
+    setCharacterReferences([]);
+    setStoryBreakdown(null);
+    setGeneratedPages([]);
+    setError(null);
   };
 
   return (
@@ -258,7 +222,7 @@ export default function Home() {
 
             {/* Generate Button */}
             <button
-              className="btn btn-manga-primary w-100"
+              className="btn btn-manga-primary w-100 mb-2"
               onClick={generateComic}
               disabled={isGenerating || !story.trim() || wordCount > 500}
             >
@@ -271,6 +235,17 @@ export default function Home() {
                 'Generate Comic'
               )}
             </button>
+            
+            {/* Clear Results Button */}
+            {(storyAnalysis || characterReferences.length > 0 || storyBreakdown || generatedPages.length > 0) && (
+              <button
+                className="btn btn-manga-outline w-100"
+                onClick={clearResults}
+                disabled={isGenerating}
+              >
+                Clear Previous Results
+              </button>
+            )}
           </div>
         </div>
 
@@ -290,10 +265,10 @@ export default function Home() {
                     data-bs-toggle="collapse" 
                     data-bs-target="#analysisCollapse"
                   >
-                    <span className="me-2">{getStepIcon(getStepStatus('analysis'))}</span>
+                    <span className="me-2">{storyAnalysis ? '✅' : '⏳'}</span>
                     Step 1: Story Analysis
-                    <span className={`badge ${getStepBadge(getStepStatus('analysis'))} ms-auto me-3`}>
-                      {getStepStatus('analysis')}
+                    <span className={`badge ${storyAnalysis ? 'badge-manga-success' : 'badge-manga-warning'} ms-auto me-3`}>
+                      {storyAnalysis ? 'completed' : 'pending'}
                     </span>
                   </button>
                 </h2>
@@ -326,10 +301,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <p className="text-muted">
-                        {getStepStatus('analysis') === 'in-progress' ? 
-                          'Analyzing your story to extract characters, setting, and themes...' : 
-                          'Story analysis will appear here once generation begins.'
-                        }
+                        Story analysis will appear here once generation begins.
                       </p>
                     )}
                   </div>
@@ -345,10 +317,10 @@ export default function Home() {
                     data-bs-toggle="collapse" 
                     data-bs-target="#charactersCollapse"
                   >
-                    <span className="me-2">{getStepIcon(getStepStatus('characters'))}</span>
+                    <span className="me-2">{characterReferences.length > 0 ? '✅' : '⏳'}</span>
                     Step 2: Character Designs
-                    <span className={`badge ${getStepBadge(getStepStatus('characters'))} ms-auto me-3`}>
-                      {getStepStatus('characters')}
+                    <span className={`badge ${characterReferences.length > 0 ? 'badge-manga-success' : 'badge-manga-warning'} ms-auto me-3`}>
+                      {characterReferences.length > 0 ? 'completed' : 'pending'}
                     </span>
                   </button>
                 </h2>
@@ -379,10 +351,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <p className="text-muted">
-                        {getStepStatus('characters') === 'in-progress' ? 
-                          'Creating character reference images to maintain visual consistency...' : 
-                          'Character design images will appear here after story analysis.'
-                        }
+                        Character design images will appear here after story analysis.
                       </p>
                     )}
                   </div>
@@ -398,10 +367,10 @@ export default function Home() {
                     data-bs-toggle="collapse" 
                     data-bs-target="#layoutCollapse"
                   >
-                    <span className="me-2">{getStepIcon(getStepStatus('layout'))}</span>
+                    <span className="me-2">{storyBreakdown ? '✅' : '⏳'}</span>
                     Step 3: Comic Layout Plan
-                    <span className={`badge ${getStepBadge(getStepStatus('layout'))} ms-auto me-3`}>
-                      {getStepStatus('layout')}
+                    <span className={`badge ${storyBreakdown ? 'badge-manga-success' : 'badge-manga-warning'} ms-auto me-3`}>
+                      {storyBreakdown ? 'completed' : 'pending'}
                     </span>
                   </button>
                 </h2>
@@ -444,10 +413,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <p className="text-muted">
-                        {getStepStatus('layout') === 'in-progress' ? 
-                          'Breaking down your story into comic panels and pages...' : 
-                          'Comic layout plan will appear here after character designs are complete.'
-                        }
+                        Comic layout plan will appear here after character designs are complete.
                       </p>
                     )}
                   </div>
@@ -463,10 +429,10 @@ export default function Home() {
                     data-bs-toggle="collapse" 
                     data-bs-target="#pagesCollapse"
                   >
-                    <span className="me-2">{getStepIcon(getStepStatus('pages'))}</span>
+                    <span className="me-2">{generatedPages.length > 0 ? '✅' : '⏳'}</span>
                     Step 4: Generated Pages
-                    <span className={`badge ${getStepBadge(getStepStatus('pages'))} ms-auto me-3`}>
-                      {getStepStatus('pages')}
+                    <span className={`badge ${generatedPages.length > 0 ? 'badge-manga-success' : 'badge-manga-warning'} ms-auto me-3`}>
+                      {generatedPages.length > 0 ? 'completed' : 'pending'}
                     </span>
                   </button>
                 </h2>
@@ -511,10 +477,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <p className="text-muted">
-                        {getStepStatus('pages') === 'in-progress' ? 
-                          'Generating comic pages using character references and layout plan...' : 
-                          'Your finished comic pages will appear here!'
-                        }
+                        Your finished comic pages will appear here!
                       </p>
                     )}
                   </div>
