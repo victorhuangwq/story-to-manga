@@ -1064,9 +1064,9 @@ export default function Home() {
 							/>
 						</div>
 						<p className="text-center text-manga-medium-gray mb-4">
-							Transform your stories into stunning visual comics with AI. Simply
-							write your story, choose a style, and watch as your narrative
-							comes to life panel by panel.
+							Transform your stories into stunning visual comics with Nano Banana
+							(Gemini 2.5 Flash Image). Simply write your story, choose a style,
+							and watch as your narrative comes to life panel by panel.
 						</p>
 
 						{/* Style Selection */}
