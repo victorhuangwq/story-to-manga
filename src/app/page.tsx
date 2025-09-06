@@ -142,6 +142,7 @@ interface AccordionSectionProps {
 	isOpen: boolean;
 	onToggle: () => void;
 	children: React.ReactNode;
+	showStatus?: boolean;
 }
 
 function AccordionSection({
@@ -153,14 +154,17 @@ function AccordionSection({
 	isOpen,
 	onToggle,
 	children,
+	showStatus = true,
 }: AccordionSectionProps) {
 	const getStatusIcon = () => {
+		if (!showStatus) return "";
 		if (isCompleted) return "✅";
 		if (isInProgress) return "🔄";
 		return "⏳";
 	};
 
 	const getStatusBadge = () => {
+		if (!showStatus) return null;
 		if (isCompleted) return "completed";
 		if (isInProgress) return "in-progress";
 		return "pending";
@@ -170,9 +174,9 @@ function AccordionSection({
 		<div className="accordion-item">
 			<h2 className="accordion-header" id={id}>
 				<button className="accordion-button" type="button" onClick={onToggle}>
-					<span className="mr-2">{getStatusIcon()}</span>
+					{getStatusIcon() && <span className="mr-2">{getStatusIcon()}</span>}
 					Step {stepNumber}: {title}
-					<StatusBadge status={getStatusBadge()} />
+					{getStatusBadge() && <StatusBadge status={getStatusBadge()!} />}
 				</button>
 			</h2>
 			<div className={`accordion-body ${isOpen ? "" : "hidden"}`}>
@@ -1162,8 +1166,14 @@ export default function Home() {
 								title="Story Analysis"
 								stepNumber={1}
 								isCompleted={!!storyAnalysis}
+								isInProgress={
+									isGenerating &&
+									!storyAnalysis &&
+									currentStepText.includes("Analyzing")
+								}
 								isOpen={openAccordions.has("analysis")}
 								onToggle={() => toggleAccordionSection("analysis")}
+								showStatus={isGenerating || !!storyAnalysis}
 							>
 								{storyAnalysis ? (
 									<div>
@@ -1222,8 +1232,15 @@ export default function Home() {
 								title="Character Designs"
 								stepNumber={2}
 								isCompleted={characterReferences.length > 0}
+								isInProgress={
+									isGenerating &&
+									!!storyAnalysis &&
+									characterReferences.length === 0 &&
+									currentStepText.includes("character")
+								}
 								isOpen={openAccordions.has("characters")}
 								onToggle={() => toggleAccordionSection("characters")}
+								showStatus={isGenerating || characterReferences.length > 0}
 							>
 								{characterReferences.length > 0 ? (
 									<div className="character-grid">
@@ -1282,8 +1299,15 @@ export default function Home() {
 								title="Comic Layout Plan"
 								stepNumber={3}
 								isCompleted={!!storyBreakdown}
+								isInProgress={
+									isGenerating &&
+									characterReferences.length > 0 &&
+									!storyBreakdown &&
+									currentStepText.includes("layout")
+								}
 								isOpen={openAccordions.has("layout")}
 								onToggle={() => toggleAccordionSection("layout")}
+								showStatus={isGenerating || !!storyBreakdown}
 							>
 								{storyBreakdown ? (
 									<div>
@@ -1335,9 +1359,15 @@ export default function Home() {
 								title="Generated Panels"
 								stepNumber={4}
 								isCompleted={getPanelStatus().isCompleted}
-								isInProgress={getPanelStatus().isInProgress}
+								isInProgress={
+									getPanelStatus().isInProgress ||
+									(isGenerating &&
+										!!storyBreakdown &&
+										currentStepText.includes("panel"))
+								}
 								isOpen={openAccordions.has("panels")}
 								onToggle={() => toggleAccordionSection("panels")}
+								showStatus={isGenerating || generatedPanels.length > 0}
 							>
 								{generatedPanels.length > 0 ? (
 									<div>
