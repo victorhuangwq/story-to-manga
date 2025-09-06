@@ -1,0 +1,876 @@
+/* 
+ * Manga Comic Theme - Black & White with Comic Book Feel
+ * Fonts: Comic Sans inspiration but professional
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Bangers:wght@400&family=Comfortaa:wght@300;400;700&family=Permanent+Marker&family=M+PLUS+1:wght@300;400;700&family=Sawarabi+Gothic&family=Zen+Old+Mincho:wght@400;700&display=swap');
+
+/* Custom CSS Variables - Manga Theme */
+:root {
+  /* Manga Color Palette */
+  --manga-white: #FFFFFF;
+  --manga-off-white: #FAFAFA;
+  --manga-light-gray: #F5F5F5;
+  --manga-gray: #E0E0E0;
+  --manga-medium-gray: #9E9E9E;
+  --manga-dark-gray: #424242;
+  --manga-charcoal: #2E2E2E;
+  --manga-black: #000000;
+  
+  /* Accent Colors for Status */
+  --manga-success: #2E7D32;
+  --manga-warning: #F57C00;
+  --manga-danger: #C62828;
+  --manga-info: #1976D2;
+  
+  /* Comic Book Effects */
+  --comic-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --comic-border: 2px solid var(--manga-black);
+  --comic-radius: 8px;
+  
+  /* Typography - American Comic Style */
+  --font-display-comic: 'Bangers', cursive;
+  --font-body-comic: 'Comfortaa', sans-serif;
+  --font-handwriting-comic: 'Permanent Marker', cursive;
+  
+  /* Typography - Manga Style */
+  --font-display-manga: 'Sawarabi Gothic', 'M PLUS 1', sans-serif;
+  --font-body-manga: 'M PLUS 1', 'Sawarabi Gothic', sans-serif;
+  --font-handwriting-manga: 'Zen Old Mincho', serif;
+  
+  /* Manga-specific design elements */
+  --manga-border-traditional: 1px solid var(--manga-black);
+  --manga-shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --manga-radius-minimal: 4px;
+  --manga-accent-red: #D32F2F;
+  --manga-accent-gold: #FF8F00;
+  
+  /* Universal */
+  --font-mono: 'Courier New', monospace;
+}
+
+/* Base Styles */
+body {
+  background: var(--manga-off-white);
+  color: var(--manga-charcoal);
+  line-height: 1.6;
+}
+
+/* Text Color Fixes */
+.form-label {
+  color: var(--manga-black) !important;
+  font-weight: 500;
+}
+
+.text-muted {
+  color: var(--manga-medium-gray) !important;
+}
+
+.small {
+  color: var(--manga-charcoal) !important;
+}
+
+p {
+  color: var(--manga-charcoal) !important;
+}
+
+/* Headings should be dark and visible */
+h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
+  color: var(--manga-black) !important;
+}
+
+/* Form elements */
+.form-text {
+  color: var(--manga-charcoal) !important;
+}
+
+.form-text.text-danger {
+  color: var(--manga-danger) !important;
+}
+
+/* Badge colors */
+.badge {
+  color: var(--manga-white) !important;
+}
+
+.badge.bg-secondary {
+  background-color: var(--manga-medium-gray) !important;
+  color: var(--manga-white) !important;
+}
+
+/* Ensure proper contrast for all text elements */
+.accordion-manga .accordion-body p,
+.accordion-manga .accordion-body div,
+.accordion-manga .accordion-body h5,
+.accordion-manga .accordion-body h6 {
+  color: var(--manga-charcoal) !important;
+}
+
+.accordion-manga .accordion-body .text-muted {
+  color: var(--manga-medium-gray) !important;
+}
+
+/* Alert text */
+.alert {
+  color: var(--manga-charcoal) !important;
+}
+
+.alert-danger {
+  color: var(--manga-danger) !important;
+  background-color: rgba(198, 40, 40, 0.1) !important;
+  border-color: var(--manga-danger) !important;
+}
+
+/* Style-specific body fonts */
+.style-manga body {
+  font-family: var(--font-body-manga);
+}
+
+.style-comic body {
+  font-family: var(--font-body-comic);
+}
+
+/* Typography Overrides - Manga Style (Traditional Japanese Aesthetic) */
+.style-manga h1, .style-manga .h1 {
+  font-family: var(--font-display-manga);
+  color: var(--manga-black);
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  line-height: 1.2;
+  position: relative;
+}
+
+/* Traditional Japanese title styling with accent */
+.style-manga h1::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: var(--manga-accent-red);
+}
+
+.style-manga h2, .style-manga .h2 {
+  font-family: var(--font-display-manga);
+  color: var(--manga-charcoal);
+  letter-spacing: 0.01em;
+  font-weight: 400;
+  line-height: 1.4;
+  border-left: 3px solid var(--manga-accent-red);
+  padding-left: 12px;
+}
+
+.style-manga h3, .style-manga .h3 {
+  font-family: var(--font-display-manga);
+  color: var(--manga-charcoal);
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+.style-manga .handwriting {
+  font-family: var(--font-handwriting-manga);
+  font-weight: 400;
+}
+
+/* Typography Overrides - Comic Style */
+.style-comic h1, .style-comic .h1 {
+  font-family: var(--font-display-comic);
+  color: var(--manga-black);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 400;
+}
+
+.style-comic h2, .style-comic .h2, .style-comic h3, .style-comic .h3 {
+  font-family: var(--font-display-comic);
+  color: var(--manga-charcoal);
+  letter-spacing: 1px;
+}
+
+.style-comic .handwriting {
+  font-family: var(--font-handwriting-comic);
+}
+
+/* Panel Styles - Comic Style (Bold, 3D effect) */
+.style-comic .comic-panel {
+  background: var(--manga-white);
+  border: var(--comic-border);
+  border-radius: var(--comic-radius);
+  box-shadow: var(--comic-shadow);
+  position: relative;
+}
+
+.style-comic .comic-panel::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: var(--manga-black);
+  border-radius: var(--comic-radius);
+  z-index: -1;
+}
+
+/* Panel Styles - Manga Style (Minimalist, Traditional) */
+.style-manga .comic-panel {
+  background: var(--manga-white);
+  border: var(--manga-border-traditional);
+  border-radius: var(--manga-radius-minimal);
+  box-shadow: var(--manga-shadow-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Traditional Japanese paper texture effect */
+.style-manga .comic-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 48%, rgba(0,0,0,0.01) 49%, rgba(0,0,0,0.01) 51%, transparent 52%);
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+/* Traditional tatami-like border accent for manga - only for main panels, not accordion content */
+.style-manga .comic-panel:not(.accordion-manga .comic-panel)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--manga-accent-red) 0%, var(--manga-accent-gold) 100%);
+}
+
+/* Remove accent from panels inside accordions to avoid overlap */
+.style-manga .accordion-manga .comic-panel::after {
+  display: none;
+}
+
+/* Buttons - Manga Style (Minimalist, Traditional) */
+.style-manga .btn-manga-primary {
+  background: var(--manga-black);
+  color: var(--manga-white);
+  border: var(--manga-border-traditional);
+  font-family: var(--font-display-manga);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  border-radius: var(--manga-radius-minimal);
+  box-shadow: var(--manga-shadow-subtle);
+  transition: all 0.2s ease-out;
+  position: relative;
+}
+
+.style-manga .btn-manga-primary::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--manga-accent-red);
+  transition: width 0.3s ease;
+}
+
+.style-manga .btn-manga-primary:hover {
+  background: var(--manga-charcoal);
+  color: var(--manga-white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.style-manga .btn-manga-primary:hover::after {
+  width: 100%;
+}
+
+.style-manga .btn-manga-outline {
+  background: transparent;
+  color: var(--manga-black);
+  border: var(--manga-border-traditional);
+  font-family: var(--font-display-manga);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  border-radius: var(--manga-radius-minimal);
+  transition: all 0.2s ease-out;
+  position: relative;
+}
+
+.style-manga .btn-manga-outline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: var(--manga-black);
+  transition: width 0.3s ease;
+  z-index: -1;
+}
+
+.style-manga .btn-manga-outline:hover {
+  color: var(--manga-white);
+}
+
+.style-manga .btn-manga-outline:hover::before {
+  width: 100%;
+}
+
+/* Buttons - Comic Style */
+.style-comic .btn-manga-primary {
+  background: var(--manga-black);
+  color: var(--manga-white);
+  border: 2px solid var(--manga-black);
+  font-family: var(--font-display-comic);
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: var(--comic-radius);
+  box-shadow: var(--comic-shadow);
+  transition: all 0.3s ease;
+}
+
+.style-comic .btn-manga-primary:hover {
+  background: var(--manga-white);
+  color: var(--manga-black);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.style-comic .btn-manga-outline {
+  background: transparent;
+  color: var(--manga-black);
+  border: 2px solid var(--manga-black);
+  font-family: var(--font-display-comic);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: var(--comic-radius);
+  transition: all 0.3s ease;
+}
+
+.style-comic .btn-manga-outline:hover {
+  background: var(--manga-black);
+  color: var(--manga-white);
+}
+
+/* Card Styles */
+.card-manga {
+  background: var(--manga-white) !important;
+  border: var(--comic-border) !important;
+  border-radius: var(--comic-radius);
+  box-shadow: var(--comic-shadow);
+}
+
+.card-manga .card-body {
+  background: var(--manga-white) !important;
+  color: var(--manga-charcoal) !important;
+}
+
+.card-manga .card-title {
+  color: var(--manga-black) !important;
+  font-weight: bold;
+}
+
+.card-manga .card-text {
+  color: var(--manga-charcoal) !important;
+}
+
+.style-comic .card-manga .card-header {
+  background: var(--manga-black) !important;
+  color: var(--manga-white) !important;
+  border-bottom: var(--comic-border);
+  font-family: var(--font-display-comic);
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.style-manga .card-manga .card-header {
+  background: var(--manga-black) !important;
+  color: var(--manga-white) !important;
+  border-bottom: var(--comic-border);
+  font-family: var(--font-display-manga);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+/* Accordion - Behind the Scenes Style */
+.accordion-manga {
+  border: none;
+}
+
+.accordion-manga .accordion-item {
+  background: var(--manga-white) !important;
+  border: var(--comic-border) !important;
+  border-radius: var(--comic-radius) !important;
+  margin-bottom: 1rem;
+  box-shadow: var(--comic-shadow);
+}
+
+.accordion-manga .accordion-header {
+  border-radius: var(--comic-radius);
+}
+
+/* Comic Style Accordion */
+.style-comic .accordion-manga .accordion-button {
+  background: var(--manga-black) !important;
+  color: var(--manga-white) !important;
+  font-family: var(--font-display-comic);
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: none !important;
+  border-radius: var(--comic-radius) !important;
+  box-shadow: none !important;
+}
+
+.style-comic .accordion-manga .accordion-button:not(.collapsed) {
+  background: var(--manga-charcoal) !important;
+  color: var(--manga-white) !important;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.125) !important;
+}
+
+.style-comic .accordion-manga .accordion-button::after {
+  filter: invert(1);
+}
+
+.style-comic .accordion-manga .accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.25) !important;
+  border-color: var(--manga-black) !important;
+}
+
+/* Manga Style Accordion (Traditional Japanese Design) */
+.style-manga .accordion-manga .accordion-item {
+  border: var(--manga-border-traditional) !important;
+  border-radius: var(--manga-radius-minimal) !important;
+  box-shadow: var(--manga-shadow-subtle) !important;
+  margin-bottom: 0.5rem;
+  overflow: visible !important;
+  position: relative;
+}
+
+.style-manga .accordion-manga .accordion-header {
+  border-radius: var(--manga-radius-minimal) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.style-manga .accordion-manga .accordion-button {
+  background: var(--manga-white) !important;
+  color: var(--manga-black) !important;
+  font-family: var(--font-display-manga);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  border: none !important;
+  border-radius: var(--manga-radius-minimal) !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  position: relative;
+  z-index: 1;
+  padding: 1rem 1.25rem !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.style-manga .accordion-manga .accordion-button:not(.collapsed) {
+  background: var(--manga-white) !important;
+  color: var(--manga-black) !important;
+  box-shadow: inset 0 0 0 1px var(--manga-gray) !important;
+}
+
+.style-manga .accordion-manga .accordion-button::after {
+  filter: none;
+  color: var(--manga-charcoal);
+}
+
+.style-manga .accordion-manga .accordion-button:focus {
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2) !important;
+  z-index: 2;
+}
+
+.style-manga .accordion-manga .accordion-button:hover {
+  background: var(--manga-light-gray) !important;
+}
+
+/* Ensure accordion body doesn't interfere with button styling */
+.style-manga .accordion-manga .accordion-body {
+  position: relative;
+  z-index: 0;
+  background: var(--manga-white) !important;
+  border-top: 1px solid var(--manga-light-gray) !important;
+}
+
+/* Accordion Body - Universal */
+.accordion-manga .accordion-body {
+  background: var(--manga-white) !important;
+  color: var(--manga-charcoal) !important;
+  border-top: 1px solid var(--manga-gray) !important;
+  padding: 1.25rem !important;
+}
+
+/* Fix Bootstrap accordion transition issues */
+.accordion-manga .accordion-collapse {
+  background: var(--manga-white) !important;
+}
+
+.accordion-manga .accordion-collapse.show {
+  background: var(--manga-white) !important;
+}
+
+.accordion-manga .accordion-collapse.collapsing {
+  background: var(--manga-white) !important;
+}
+
+/* Override any Bootstrap defaults that might cause white text on white background */
+.accordion-manga * {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Ensure all nested elements have proper colors and visibility using specificity */
+.style-manga .accordion-manga .accordion-body *:not(.text-muted),
+.style-comic .accordion-manga .accordion-body *:not(.text-muted) {
+  color: inherit;
+  opacity: 1;
+  visibility: visible;
+}
+
+.style-manga .accordion-manga .accordion-body .text-muted,
+.style-manga .accordion-manga .accordion-body .text-muted *,
+.style-comic .accordion-manga .accordion-body .text-muted,
+.style-comic .accordion-manga .accordion-body .text-muted * {
+  color: var(--manga-medium-gray);
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Progress Indicators */
+.progress-manga {
+  background: var(--manga-gray);
+  border: 1px solid var(--manga-dark-gray);
+  border-radius: var(--comic-radius);
+  height: 1.5rem;
+}
+
+.progress-manga .progress-bar {
+  background: var(--manga-black);
+  color: var(--manga-white);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+}
+
+/* Status Badges - Comic Style */
+.style-comic .badge-manga-success {
+  background: var(--manga-success);
+  color: var(--manga-white);
+  font-family: var(--font-display-comic);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.style-comic .badge-manga-warning {
+  background: var(--manga-warning);
+  color: var(--manga-white);
+  font-family: var(--font-display-comic);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.style-comic .badge-manga-info {
+  background: var(--manga-info);
+  color: var(--manga-white);
+  font-family: var(--font-display-comic);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Status Badges - Manga Style (Minimal) */
+.style-manga .badge-manga-success {
+  background: var(--manga-success);
+  color: var(--manga-white);
+  font-family: var(--font-body-manga);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-radius: var(--manga-radius-minimal);
+  padding: 0.25em 0.5em;
+}
+
+.style-manga .badge-manga-warning {
+  background: var(--manga-light-gray) !important;
+  color: var(--manga-charcoal) !important;
+  border: 1px solid var(--manga-gray) !important;
+  font-family: var(--font-body-manga);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-radius: var(--manga-radius-minimal);
+  padding: 0.25em 0.5em;
+}
+
+.style-manga .badge-manga-info {
+  background: var(--manga-accent-red);
+  color: var(--manga-white);
+  font-family: var(--font-body-manga);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-radius: var(--manga-radius-minimal);
+  padding: 0.25em 0.5em;
+}
+
+/* More specific badge rules to ensure they override Bootstrap */
+.badge-manga-warning {
+  background: var(--manga-warning) !important;
+  color: var(--manga-white) !important;
+}
+
+.style-manga .badge-manga-warning {
+  background: var(--manga-light-gray) !important;
+  color: var(--manga-charcoal) !important;
+  border: 1px solid var(--manga-gray) !important;
+}
+
+/* Form Controls - Manga Style (Minimalist) */
+.style-manga .form-control-manga {
+  border: var(--manga-border-traditional);
+  border-bottom: 2px solid var(--manga-accent-red);
+  border-radius: var(--manga-radius-minimal);
+  font-family: var(--font-body-manga);
+  background: var(--manga-white);
+  color: var(--manga-charcoal);
+  transition: all 0.2s ease;
+}
+
+.style-manga .form-control-manga:focus {
+  border-color: var(--manga-accent-red);
+  border-bottom-color: var(--manga-accent-gold);
+  box-shadow: 0 2px 4px rgba(211, 47, 47, 0.1);
+  outline: none;
+}
+
+.style-manga .form-select-manga {
+  border: var(--manga-border-traditional);
+  border-bottom: 2px solid var(--manga-accent-red);
+  border-radius: var(--manga-radius-minimal);
+  font-family: var(--font-body-manga);
+  background: var(--manga-white);
+  color: var(--manga-charcoal);
+}
+
+/* Manga-specific form labels with traditional styling */
+.style-manga .form-label {
+  color: var(--manga-black) !important;
+  font-family: var(--font-display-manga);
+  font-weight: 400;
+  position: relative;
+  padding-left: 8px;
+}
+
+.style-manga .form-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 12px;
+  background: var(--manga-accent-red);
+  border-radius: 1px;
+}
+
+/* Form Controls - Comic Style */
+.style-comic .form-control-manga {
+  border: 2px solid var(--manga-dark-gray);
+  border-radius: var(--comic-radius);
+  font-family: var(--font-body-comic);
+  background: var(--manga-white);
+  color: var(--manga-charcoal);
+}
+
+.style-comic .form-control-manga:focus {
+  border-color: var(--manga-black);
+  box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.125);
+}
+
+.style-comic .form-select-manga {
+  border: 2px solid var(--manga-dark-gray);
+  border-radius: var(--comic-radius);
+  font-family: var(--font-body-comic);
+  background: var(--manga-white);
+  color: var(--manga-charcoal);
+}
+
+/* Speech Bubble Effect */
+.speech-bubble {
+  position: relative;
+  background: var(--manga-white);
+  border: 2px solid var(--manga-black);
+  border-radius: 20px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 30px;
+  width: 0;
+  height: 0;
+  border: 12px solid transparent;
+  border-top-color: var(--manga-white);
+}
+
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 27px;
+  width: 0;
+  height: 0;
+  border: 15px solid transparent;
+  border-top-color: var(--manga-black);
+}
+
+/* Thought Bubble Effect */
+.thought-bubble {
+  position: relative;
+  background: var(--manga-light-gray);
+  border: 2px dashed var(--manga-dark-gray);
+  border-radius: 25px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+/* Character Grid */
+.character-grid img {
+  border: var(--comic-border);
+  border-radius: var(--comic-radius);
+  box-shadow: var(--comic-shadow);
+  transition: transform 0.3s ease;
+}
+
+.character-grid img:hover {
+  transform: scale(1.05);
+}
+
+/* Animation for Loading */
+@keyframes manga-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+.manga-loading {
+  animation: manga-pulse 2s infinite;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .comic-panel {
+    border-width: 1px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  h1, .h1 {
+    font-size: 1.75rem;
+  }
+  
+  .btn-manga-primary,
+  .btn-manga-outline {
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+  }
+}
+
+/* Floating Report Issue Button */
+.floating-report-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--manga-black);
+  color: var(--manga-white);
+  text-decoration: none;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  border: 2px solid var(--manga-black);
+}
+
+.floating-report-btn:hover {
+  color: var(--manga-white);
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  background: var(--manga-dark-gray);
+}
+
+.floating-report-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Style adjustments for manga theme */
+.style-manga .floating-report-btn {
+  font-family: var(--font-display-manga);
+  border-radius: 8px;
+  box-shadow: 
+    0 2px 0 var(--manga-black),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.style-manga .floating-report-btn:hover {
+  background: var(--manga-white);
+  color: var(--manga-black);
+  box-shadow: 
+    0 2px 0 var(--manga-black),
+    0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Style adjustments for comic theme */
+.style-comic .floating-report-btn {
+  font-family: var(--font-display-comic);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: var(--comic-radius);
+  box-shadow: var(--comic-shadow);
+}
+
+.style-comic .floating-report-btn:hover {
+  background: var(--manga-primary);
+  color: var(--manga-white);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .floating-report-btn {
+    bottom: 16px;
+    right: 16px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+  }
+  
+  .floating-report-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}

@@ -1,0 +1,30 @@
+{
+	"name": "story-comic-app",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev -p 8000",
+		"build": "next build",
+		"start": "next start",
+		"lint": "biome check . --write",
+		"format": "biome format . --write",
+		"typecheck": "tsc --noEmit",
+		"check": "npm run typecheck && npm run lint"
+	},
+	"dependencies": {
+		"@google/genai": "1.16.0",
+		"bootstrap": "5.3.8",
+		"next": "15.5.2",
+		"pino": "9.9.0",
+		"pino-pretty": "13.1.1",
+		"react": "19.1.1",
+		"react-dom": "19.1.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.2",
+		"@types/node": "24.3.0",
+		"@types/react": "19.1.12",
+		"@types/react-dom": "19.1.9",
+		"typescript": "5.9.2"
+	}
+}
