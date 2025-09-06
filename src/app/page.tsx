@@ -158,7 +158,7 @@ export default function Home() {
 				const { generatedPanel } = await panelResponse.json();
 				panels.push(generatedPanel);
 				setGeneratedPanels([...panels]);
-				
+
 				// Auto-expand panels section after first panel is generated
 				if (i === 0) {
 					setOpenAccordion("panels");
@@ -427,7 +427,7 @@ export default function Home() {
 			const { generatedPanel } = await response.json();
 			panels.push(generatedPanel);
 			setGeneratedPanels([...panels]);
-			
+
 			// Auto-expand panels section after first panel is generated
 			if (i === 0) {
 				setOpenAccordion("panels");
@@ -437,6 +437,20 @@ export default function Home() {
 
 	return (
 		<div className={`min-h-screen py-4 px-4 style-${style}`}>
+			{/* Top navigation with logo */}
+			<div className="mb-4">
+				<a
+					href="/"
+					className="inline-flex items-center hover:opacity-80 transition-opacity"
+					title="Story to Manga Generator - Home"
+				>
+					<img
+						src="/logo.png"
+						alt="Story to Manga Generator Logo"
+						className="w-8 h-8 rounded"
+					/>
+				</a>
+			</div>
 			<div className="flex flex-col lg:flex-row gap-4 h-full">
 				{/* Left Panel - Input */}
 				<div className="w-full lg:w-1/3 mb-4 lg:mb-0">
@@ -444,8 +458,17 @@ export default function Home() {
 						<h1 className="text-2xl text-center mb-2">
 							Story to {style === "manga" ? "Manga" : "Comic"} Generator
 						</h1>
+						<div className="text-center mb-4">
+							<img
+								src="/description-panel.jpeg"
+								alt="Manga artist working at computer creating comic panels"
+								className="w-full max-w-md mx-auto rounded-lg shadow-comic border-2 border-manga-black mb-3"
+							/>
+						</div>
 						<p className="text-center text-manga-medium-gray mb-4">
-							Transform your stories into stunning visual comics with AI. Simply write your story, choose a style, and watch as your narrative comes to life panel by panel.
+							Transform your stories into stunning visual comics with AI. Simply
+							write your story, choose a style, and watch as your narrative
+							comes to life panel by panel.
 						</p>
 
 						{/* Style Selection */}

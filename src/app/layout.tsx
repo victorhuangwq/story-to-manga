@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import "./globals.css";
 import "../styles/manga-components.css";
+import "./globals.css";
 
 export const metadata: Metadata = {
-	title: "Story to Comic Generator",
+	title: "Story to Manga Generator",
 	description: "Transform your stories into manga and comic pages using AI",
 };
 
