@@ -1,6 +1,8 @@
 # Story to Manga Generator
 
-Transform your written stories into visual manga or comic book pages using Google Gemini 2.5 AI.
+Transform your written stories into visual manga or comic book pages using Nano Banana!
+
+*Built for the [Nano Banana Hackathon](https://www.kaggle.com/competitions/banana)* 🍌
 
 ## Features
 
@@ -13,7 +15,7 @@ Transform your written stories into visual manga or comic book pages using Googl
 ## Tech Stack
 
 - **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
-- **AI Model**: Google Gemini 2.5 Flash Image (Preview)
+- **AI Model**: [Nano Banana (Gemini 2.5 Flash Image)](https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-image-preview)
 - **Deployment**: AWS Amplify Gen 2
 
 ## Setup Instructions
