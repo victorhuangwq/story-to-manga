@@ -1,0 +1,524 @@
+/* Comic Panel Styles */
+.comic-panel {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.style-comic .comic-panel {
+  border: 2px solid var(--color-manga-black);
+  border-radius: var(--radius-comic);
+  box-shadow: var(--shadow-comic);
+  position: relative;
+}
+
+.style-manga .comic-panel {
+  border: 1px solid var(--color-manga-black);
+  border-radius: var(--radius-manga-minimal);
+  box-shadow: var(--shadow-manga-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button Styles - Manga */
+.style-manga .btn-manga-primary {
+  background: var(--color-manga-black);
+  color: white;
+  border: 1px solid var(--color-manga-black);
+  font-family: var(--font-family-display-manga);
+  font-weight: normal;
+  letter-spacing: 0.025em;
+  border-radius: var(--radius-manga-minimal);
+  box-shadow: var(--shadow-manga-subtle);
+  transition: all 200ms ease-out;
+  position: relative;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.style-manga .btn-manga-primary:hover:not(:disabled) {
+  background: var(--color-manga-charcoal);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.style-manga .btn-manga-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.style-manga .btn-manga-outline {
+  background: transparent;
+  color: var(--color-manga-black);
+  border: 1px solid var(--color-manga-black);
+  font-family: var(--font-family-display-manga);
+  font-weight: normal;
+  letter-spacing: 0.025em;
+  border-radius: var(--radius-manga-minimal);
+  transition: all 200ms ease-out;
+  position: relative;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+/* Style for checked radio button */
+input[type="radio"]:checked + .btn-manga-outline {
+  background: var(--color-manga-black);
+  color: white;
+}
+
+.style-manga .btn-manga-outline:hover:not(:disabled) {
+  background: var(--color-manga-black);
+  color: white;
+}
+
+.style-manga .btn-manga-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Button Styles - Comic */
+.style-comic .btn-manga-primary {
+  background: var(--color-manga-black);
+  color: white;
+  border: 2px solid var(--color-manga-black);
+  font-family: var(--font-family-display-comic);
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--radius-comic);
+  box-shadow: var(--shadow-comic);
+  transition: all 300ms;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.style-comic .btn-manga-primary:hover:not(:disabled) {
+  background: white;
+  color: var(--color-manga-black);
+  transform: translateY(-2px);
+}
+
+.style-comic .btn-manga-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.style-comic .btn-manga-outline {
+  background: transparent;
+  color: var(--color-manga-black);
+  border: 2px solid var(--color-manga-black);
+  font-family: var(--font-family-display-comic);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--radius-comic);
+  transition: all 300ms;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+/* Style for checked radio button - Comic style */
+.style-comic input[type="radio"]:checked + .btn-manga-outline {
+  background: var(--color-manga-black);
+  color: white;
+}
+
+.style-comic .btn-manga-outline:hover:not(:disabled) {
+  background: var(--color-manga-black);
+  color: white;
+}
+
+.style-comic .btn-manga-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Card Styles */
+.card-manga {
+  background: white;
+  border: 2px solid var(--color-manga-black);
+  border-radius: var(--radius-comic);
+  box-shadow: var(--shadow-comic);
+}
+
+.card-manga .card-body {
+  background: white;
+  color: var(--color-manga-charcoal);
+  padding: 1rem;
+}
+
+.card-manga .card-title {
+  color: var(--color-manga-black);
+  font-weight: bold;
+}
+
+.card-manga .card-text {
+  color: var(--color-manga-charcoal);
+}
+
+/* Form Controls - Manga */
+.style-manga .form-control-manga {
+  border: 1px solid var(--color-manga-black);
+  border-bottom: 2px solid var(--color-manga-accent-red);
+  border-radius: var(--radius-manga-minimal);
+  font-family: var(--font-family-body-manga);
+  background: white;
+  color: var(--color-manga-charcoal);
+  transition: all 200ms;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.style-manga .form-control-manga:focus {
+  border-color: var(--color-manga-accent-red);
+  border-bottom-color: var(--color-manga-accent-gold);
+  outline: none;
+}
+
+.style-manga .form-control-manga:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Form Controls - Comic */
+.style-comic .form-control-manga {
+  border: 2px solid var(--color-manga-dark-gray);
+  border-radius: var(--radius-comic);
+  font-family: var(--font-family-body-comic);
+  background: white;
+  color: var(--color-manga-charcoal);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.style-comic .form-control-manga:focus {
+  border-color: var(--color-manga-black);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.25);
+}
+
+.style-comic .form-control-manga:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Accordion Styles */
+.accordion-manga {
+  border: none;
+}
+
+.accordion-manga .accordion-item {
+  background: white;
+  border: 2px solid var(--color-manga-black);
+  border-radius: var(--radius-comic);
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-comic);
+}
+
+.style-manga .accordion-manga .accordion-item {
+  border: 1px solid var(--color-manga-black);
+  border-radius: var(--radius-manga-minimal);
+  margin-bottom: 0.5rem;
+  box-shadow: var(--shadow-manga-subtle);
+  overflow: visible;
+  position: relative;
+}
+
+.accordion-manga .accordion-button {
+  width: 100%;
+  text-align: left;
+  padding: 1rem 1.25rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.style-manga .accordion-manga .accordion-button {
+  background: white;
+  color: var(--color-manga-black);
+  font-family: var(--font-family-display-manga);
+  font-weight: normal;
+  letter-spacing: 0.025em;
+  border-radius: var(--radius-manga-minimal);
+  transition: all 200ms;
+  position: relative;
+}
+
+.style-manga .accordion-manga .accordion-button:hover {
+  background: var(--color-manga-light-gray);
+}
+
+.style-comic .accordion-manga .accordion-button {
+  background: var(--color-manga-black);
+  color: white;
+  font-family: var(--font-family-display-comic);
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--radius-comic);
+}
+
+.style-comic .accordion-manga .accordion-button:not(.collapsed) {
+  background: var(--color-manga-charcoal);
+  color: white;
+}
+
+.accordion-manga .accordion-body {
+  background: white;
+  color: var(--color-manga-charcoal);
+  border-top: 1px solid var(--color-manga-gray);
+  padding: 1.25rem;
+}
+
+/* Speech Bubble */
+.speech-bubble {
+  position: relative;
+  background: white;
+  border: 2px solid var(--color-manga-black);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+/* Badge Styles */
+.badge-manga-success {
+  background: var(--color-manga-success);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.badge-manga-warning {
+  background: var(--color-manga-warning);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.style-manga .badge-manga-warning {
+  background: var(--color-manga-light-gray);
+  color: var(--color-manga-charcoal);
+  border: 1px solid var(--color-manga-gray);
+}
+
+.badge-manga-info {
+  background: var(--color-manga-info);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+/* Floating Report Button */
+.floating-report-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-manga-black);
+  color: white;
+  text-decoration: none;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  transition: all 300ms;
+  border: 2px solid var(--color-manga-black);
+}
+
+.floating-report-btn:hover {
+  color: white;
+  text-decoration: none;
+  transform: translateY(-2px);
+  background: var(--color-manga-dark-gray);
+}
+
+.floating-report-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.style-manga .floating-report-btn {
+  font-family: var(--font-family-display-manga);
+  border-radius: 0.5rem;
+}
+
+.style-manga .floating-report-btn:hover {
+  background: white;
+  color: var(--color-manga-black);
+}
+
+.style-comic .floating-report-btn {
+  font-family: var(--font-family-display-comic);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border-radius: var(--radius-comic);
+  box-shadow: var(--shadow-comic);
+}
+
+/* Typography */
+.style-manga h1 {
+  font-family: var(--font-family-display-manga);
+  color: var(--color-manga-black);
+  letter-spacing: 0.025em;
+  font-weight: 500;
+  line-height: 1.2;
+  position: relative;
+}
+
+.style-manga h2 {
+  font-family: var(--font-family-display-manga);
+  color: var(--color-manga-charcoal);
+  letter-spacing: normal;
+  font-weight: normal;
+  line-height: 1.5;
+  border-left: 4px solid var(--color-manga-accent-red);
+  padding-left: 0.75rem;
+}
+
+.style-manga h3 {
+  font-family: var(--font-family-display-manga);
+  color: var(--color-manga-charcoal);
+  font-weight: 300;
+  letter-spacing: normal;
+  line-height: 1.5;
+}
+
+.style-comic h1 {
+  font-family: var(--font-family-display-comic);
+  color: var(--color-manga-black);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: normal;
+}
+
+.style-comic h2, .style-comic h3 {
+  font-family: var(--font-family-display-comic);
+  color: var(--color-manga-charcoal);
+  letter-spacing: 0.05em;
+}
+
+/* Image Modal Styles */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  animation: fadeIn 200ms ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  animation: slideIn 300ms ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.image-modal-img {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.image-modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: white;
+  color: var(--color-manga-black);
+  border: 2px solid var(--color-manga-black);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 200ms;
+  z-index: 1001;
+}
+
+.image-modal-close:hover {
+  background: var(--color-manga-black);
+  color: white;
+  transform: scale(1.1);
+}
+
+.image-modal-close:active {
+  transform: scale(0.95);
+}
+
+/* Style-specific modal adjustments */
+.style-manga .image-modal-img {
+  border: 1px solid var(--color-manga-black);
+  border-radius: var(--radius-manga-minimal);
+}
+
+.style-manga .image-modal-close {
+  border-radius: var(--radius-manga-minimal);
+  font-family: var(--font-family-display-manga);
+}
+
+.style-comic .image-modal-img {
+  border: 3px solid var(--color-manga-black);
+  border-radius: var(--radius-comic);
+  box-shadow: var(--shadow-comic);
+}
+
+.style-comic .image-modal-close {
+  border-radius: var(--radius-comic);
+  font-family: var(--font-family-display-comic);
+  box-shadow: var(--shadow-comic);
+}
+
+/* Mobile responsiveness for modal */
+@media (max-width: 640px) {
+  .image-modal-overlay {
+    padding: 1rem;
+  }
+  
+  .image-modal-close {
+    top: 10px;
+    right: 10px;
+    position: fixed;
+  }
+}

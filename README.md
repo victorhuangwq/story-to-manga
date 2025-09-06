@@ -109,4 +109,3 @@ Feel free to submit issues and enhancement requests!
 ## License
 
 MIT License - feel free to use this for your own projects.
-# story-to-manga

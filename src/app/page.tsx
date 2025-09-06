@@ -1,6 +1,5 @@
 "use client";
 
-import { useId, useState } from "react";
 import type {
 	CharacterReference,
 	ComicStyle,
@@ -8,6 +7,8 @@ import type {
 	StoryAnalysis,
 	StoryBreakdown,
 } from "@/types";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -16,10 +17,6 @@ export default function Home() {
 	const mangaRadioId = useId();
 	const comicRadioId = useId();
 	const storyTextareaId = useId();
-	const analysisCollapseId = useId();
-	const charactersCollapseId = useId();
-	const layoutCollapseId = useId();
-	const panelsCollapseId = useId();
 	const analysisHeadingId = useId();
 	const charactersHeadingId = useId();
 	const layoutHeadingId = useId();
@@ -30,6 +27,14 @@ export default function Home() {
 	const [style, setStyle] = useState<ComicStyle>("manga");
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [currentStepText, setCurrentStepText] = useState("");
+
+	// Modal state
+	const [modalImage, setModalImage] = useState<string | null>(null);
+	const [modalAlt, setModalAlt] = useState<string>("");
+
+	// Download state
+	const [isDownloadingCharacters, setIsDownloadingCharacters] = useState(false);
+	const [isDownloadingPanels, setIsDownloadingPanels] = useState(false);
 
 	// Generated content state
 	const [storyAnalysis, setStoryAnalysis] = useState<StoryAnalysis | null>(
@@ -44,6 +49,9 @@ export default function Home() {
 	const [generatedPanels, setGeneratedPanels] = useState<GeneratedPanel[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [failedStep, setFailedStep] = useState<FailedStep>(null);
+
+	// Accordion state
+	const [openAccordion, setOpenAccordion] = useState<string>("analysis");
 
 	const wordCount = story
 		.trim()
@@ -80,6 +88,7 @@ export default function Home() {
 
 			const { analysis } = await analysisResponse.json();
 			setStoryAnalysis(analysis);
+			setOpenAccordion("analysis"); // Auto-expand analysis section
 
 			// Step 2: Generate character references
 			setCurrentStepText("Creating character designs...");
@@ -99,6 +108,7 @@ export default function Home() {
 
 			const { characterReferences } = await charRefResponse.json();
 			setCharacterReferences(characterReferences);
+			setOpenAccordion("characters"); // Auto-expand characters section
 
 			// Step 3: Break down story into panels
 			setCurrentStepText("Planning comic layout...");
@@ -119,6 +129,7 @@ export default function Home() {
 
 			const { storyBreakdown: breakdown } = await storyBreakdownResponse.json();
 			setStoryBreakdown(breakdown);
+			setOpenAccordion("layout"); // Auto-expand layout section
 
 			// Step 4: Generate comic panels
 			const panels: GeneratedPanel[] = [];
@@ -147,6 +158,11 @@ export default function Home() {
 				const { generatedPanel } = await panelResponse.json();
 				panels.push(generatedPanel);
 				setGeneratedPanels([...panels]);
+				
+				// Auto-expand panels section after first panel is generated
+				if (i === 0) {
+					setOpenAccordion("panels");
+				}
 			}
 
 			setCurrentStepText("Complete! 🎉");
@@ -178,15 +194,98 @@ export default function Home() {
 		link.click();
 	};
 
-	const downloadAllPanels = () => {
-		generatedPanels.forEach((panel) => {
-			downloadImage(panel.image, `comic-panel-${panel.panelNumber}.jpg`);
+	const downloadImagesAsZip = async (
+		images: { url: string; filename: string }[],
+		zipFilename: string,
+	) => {
+		const zip = new JSZip();
+
+		// Fetch all images and add to zip
+		const promises = images.map(async ({ url, filename }) => {
+			try {
+				const response = await fetch(url);
+				const blob = await response.blob();
+				zip.file(filename, blob);
+			} catch (error) {
+				console.error(`Failed to fetch image: ${filename}`, error);
+			}
 		});
+
+		await Promise.all(promises);
+
+		// Generate zip file and download
+		const zipBlob = await zip.generateAsync({ type: "blob" });
+		const zipUrl = URL.createObjectURL(zipBlob);
+
+		const link = document.createElement("a");
+		link.href = zipUrl;
+		link.download = zipFilename;
+		link.click();
+
+		// Clean up
+		setTimeout(() => URL.revokeObjectURL(zipUrl), 100);
+	};
+
+	const downloadAllPanels = async () => {
+		setIsDownloadingPanels(true);
+		try {
+			const images = generatedPanels.map((panel) => ({
+				url: panel.image,
+				filename: `comic-panel-${panel.panelNumber}.jpg`,
+			}));
+			await downloadImagesAsZip(images, "comic-panels.zip");
+		} finally {
+			setIsDownloadingPanels(false);
+		}
 	};
 
 	const downloadPanel = (panel: GeneratedPanel) => {
 		downloadImage(panel.image, `comic-panel-${panel.panelNumber}.jpg`);
 	};
+
+	const downloadCharacter = (character: CharacterReference) => {
+		downloadImage(
+			character.image,
+			`character-${character.name.toLowerCase().replace(/\s+/g, "-")}.jpg`,
+		);
+	};
+
+	const downloadAllCharacters = async () => {
+		setIsDownloadingCharacters(true);
+		try {
+			const images = characterReferences.map((char) => ({
+				url: char.image,
+				filename: `character-${char.name.toLowerCase().replace(/\s+/g, "-")}.jpg`,
+			}));
+			await downloadImagesAsZip(images, "character-designs.zip");
+		} finally {
+			setIsDownloadingCharacters(false);
+		}
+	};
+
+	const openImageModal = useCallback((imageUrl: string, altText: string) => {
+		setModalImage(imageUrl);
+		setModalAlt(altText);
+	}, []);
+
+	const closeImageModal = useCallback(() => {
+		setModalImage(null);
+		setModalAlt("");
+	}, []);
+
+	// Handle escape key for modal
+	useEffect(() => {
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && modalImage) {
+				closeImageModal();
+			}
+		};
+
+		if (modalImage) {
+			document.addEventListener("keydown", handleEscape);
+			return () => document.removeEventListener("keydown", handleEscape);
+		}
+	}, [modalImage, closeImageModal]);
 
 	const clearResults = () => {
 		setStoryAnalysis(null);
@@ -247,6 +346,7 @@ export default function Home() {
 
 		const { analysis } = await response.json();
 		setStoryAnalysis(analysis);
+		setOpenAccordion("analysis"); // Auto-expand analysis section on retry
 	};
 
 	const retryCharacters = async () => {
@@ -269,6 +369,7 @@ export default function Home() {
 
 		const { characterReferences } = await response.json();
 		setCharacterReferences(characterReferences);
+		setOpenAccordion("characters"); // Auto-expand characters section on retry
 	};
 
 	const retryLayout = async () => {
@@ -292,6 +393,7 @@ export default function Home() {
 
 		const { storyBreakdown: breakdown } = await response.json();
 		setStoryBreakdown(breakdown);
+		setOpenAccordion("layout"); // Auto-expand layout section on retry
 	};
 
 	const retryPanels = async () => {
@@ -325,60 +427,79 @@ export default function Home() {
 			const { generatedPanel } = await response.json();
 			panels.push(generatedPanel);
 			setGeneratedPanels([...panels]);
+			
+			// Auto-expand panels section after first panel is generated
+			if (i === 0) {
+				setOpenAccordion("panels");
+			}
 		}
 	};
 
 	return (
-		<div className={`container-fluid min-vh-100 py-4 style-${style}`}>
-			<div className="row h-100">
+		<div className={`min-h-screen py-4 px-4 style-${style}`}>
+			<div className="flex flex-col lg:flex-row gap-4 h-full">
 				{/* Left Panel - Input */}
-				<div className="col-md-4 mb-4">
-					<div className="comic-panel h-100 p-4">
-						<h1 className="h2 text-center mb-4">
+				<div className="w-full lg:w-1/3 mb-4 lg:mb-0">
+					<div className="comic-panel h-full">
+						<h1 className="text-2xl text-center mb-2">
 							Story to {style === "manga" ? "Manga" : "Comic"} Generator
 						</h1>
+						<p className="text-center text-manga-medium-gray mb-4">
+							Transform your stories into stunning visual comics with AI. Simply write your story, choose a style, and watch as your narrative comes to life panel by panel.
+						</p>
 
 						{/* Style Selection */}
-						<div className="mb-3">
-							<div className="form-label">Comic Style</div>
-							<fieldset className="btn-group w-100">
+						<div className="mb-4">
+							<div className="text-manga-black font-medium mb-2">
+								Comic Style
+							</div>
+							<fieldset className="flex w-full">
 								<input
 									type="radio"
-									className="btn-check"
+									className="sr-only"
 									name="style"
 									id={mangaRadioId}
 									checked={style === "manga"}
 									onChange={() => setStyle("manga")}
 								/>
-								<label className="btn btn-manga-outline" htmlFor={mangaRadioId}>
+								<label
+									className="btn-manga-outline flex-1 text-center cursor-pointer rounded-l-lg"
+									htmlFor={mangaRadioId}
+								>
 									Japanese Manga
 								</label>
 
 								<input
 									type="radio"
-									className="btn-check"
+									className="sr-only"
 									name="style"
 									id={comicRadioId}
 									checked={style === "comic"}
 									onChange={() => setStyle("comic")}
 								/>
-								<label className="btn btn-manga-outline" htmlFor={comicRadioId}>
+								<label
+									className="btn-manga-outline flex-1 text-center cursor-pointer rounded-r-lg"
+									htmlFor={comicRadioId}
+								>
 									American Comic
 								</label>
 							</fieldset>
 						</div>
 
 						{/* Story Input */}
-						<div className="mb-3">
-							<label className="form-label" htmlFor={storyTextareaId}>
+						<div className="mb-4">
+							<label
+								className="block text-manga-black font-medium mb-2"
+								htmlFor={storyTextareaId}
+							>
 								Your Story{" "}
-								<span className="badge bg-secondary">
+								<span className="inline-block bg-manga-medium-gray text-white px-2 py-1 rounded text-xs ml-2">
 									{wordCount}/500 words
 								</span>
 							</label>
 							<textarea
 								id={storyTextareaId}
-								className="form-control form-control-manga"
+								className="form-control-manga"
 								rows={8}
 								value={story}
 								onChange={(e) => setStory(e.target.value)}
@@ -386,7 +507,7 @@ export default function Home() {
 								disabled={isGenerating}
 							/>
 							{wordCount > 500 && (
-								<div className="form-text text-danger">
+								<div className="text-manga-danger text-sm mt-1">
 									Story is too long. Please reduce to 500 words or less.
 								</div>
 							)}
@@ -394,13 +515,16 @@ export default function Home() {
 
 						{/* Error Display */}
 						{error && (
-							<div className="alert alert-danger" role="alert">
+							<div
+								className="bg-manga-danger/10 border border-manga-danger text-manga-danger p-3 rounded mb-4"
+								role="alert"
+							>
 								<strong>Error:</strong> {error}
 								{failedStep && (
 									<div className="mt-2">
 										<button
 											type="button"
-											className="btn btn-sm btn-outline-danger"
+											className="px-3 py-1 text-sm border border-manga-danger text-manga-danger rounded hover:bg-manga-danger hover:text-white transition-colors"
 											onClick={() => retryFromStep(failedStep)}
 											disabled={isGenerating}
 										>
@@ -416,20 +540,20 @@ export default function Home() {
 						{/* Generate Button */}
 						<button
 							type="button"
-							className="btn btn-manga-primary w-100 mb-2"
+							className="btn-manga-primary w-full mb-2"
 							onClick={generateComic}
 							disabled={isGenerating || !story.trim() || wordCount > 500}
 						>
 							{isGenerating ? (
 								<>
 									<span
-										className="spinner-border spinner-border-sm me-2"
+										className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
 										aria-hidden="true"
 									></span>
 									{currentStepText}
 								</>
 							) : (
-								"Generate Comic"
+								"Generate"
 							)}
 						</button>
 
@@ -440,7 +564,7 @@ export default function Home() {
 							generatedPanels.length > 0) && (
 							<button
 								type="button"
-								className="btn btn-manga-outline w-100"
+								className="btn-manga-outline w-full"
 								onClick={clearResults}
 								disabled={isGenerating}
 							>
@@ -451,87 +575,83 @@ export default function Home() {
 				</div>
 
 				{/* Right Panel - Generation Results */}
-				<div className="col-md-8">
-					<div className="comic-panel h-100 p-4">
-						<h2 className="h3 mb-4">Behind the Scenes</h2>
+				<div className="w-full lg:w-2/3">
+					<div className="comic-panel h-full">
+						<h2 className="text-xl mb-4">Behind the Scenes</h2>
 
-						<div className="accordion accordion-manga">
+						<div className="accordion-manga space-y-4">
 							{/* Step 1: Story Analysis */}
 							<div className="accordion-item">
 								<h2 className="accordion-header" id={analysisHeadingId}>
 									<button
 										className="accordion-button"
 										type="button"
-										data-bs-toggle="collapse"
-										data-bs-target={`#${analysisCollapseId}`}
+										onClick={() =>
+											setOpenAccordion(
+												openAccordion === "analysis" ? "" : "analysis",
+											)
+										}
 									>
-										<span className="me-2">{storyAnalysis ? "✅" : "⏳"}</span>
+										<span className="mr-2">{storyAnalysis ? "✅" : "⏳"}</span>
 										Step 1: Story Analysis
 										<span
-											className={`badge ${storyAnalysis ? "badge-manga-success" : "badge-manga-warning"} ms-auto me-3`}
+											className={`badge-manga-${storyAnalysis ? "success" : "warning"} ml-auto mr-3`}
 										>
 											{storyAnalysis ? "completed" : "pending"}
 										</span>
 									</button>
 								</h2>
 								<div
-									id={analysisCollapseId}
-									className="accordion-collapse collapse show"
-									data-bs-parent="#generationAccordion"
+									className={`accordion-body ${openAccordion === "analysis" ? "" : "hidden"}`}
 								>
-									<div className="accordion-body">
-										{storyAnalysis ? (
-											<div>
-												<h5>Characters:</h5>
-												<div className="row">
-													{storyAnalysis.characters.map((char) => (
-														<div key={char.name} className="col-sm-6 mb-3">
-															<div className="card card-manga">
-																<div className="card-body">
-																	<h6 className="card-title">{char.name}</h6>
-																	<p className="card-text small">
-																		{char.physicalDescription}
-																	</p>
-																	<p className="card-text">
-																		<em>{char.role}</em>
-																	</p>
-																</div>
-															</div>
+									{storyAnalysis ? (
+										<div>
+											<h5 className="font-semibold mb-2">Characters:</h5>
+											<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+												{storyAnalysis.characters.map((char) => (
+													<div key={char.name} className="card-manga">
+														<div className="card-body">
+															<h6 className="card-title">{char.name}</h6>
+															<p className="card-text text-sm">
+																{char.physicalDescription}
+															</p>
+															<p className="card-text">
+																<em>{char.role}</em>
+															</p>
 														</div>
-													))}
-												</div>
-												<h5 className="mt-3">Setting:</h5>
-												<p>
-													<strong>Location:</strong>{" "}
-													{storyAnalysis.setting.location}
-												</p>
-												<p>
-													<strong>Time Period:</strong>{" "}
-													{storyAnalysis.setting.timePeriod}
-												</p>
-												<p>
-													<strong>Mood:</strong> {storyAnalysis.setting.mood}
-												</p>
+													</div>
+												))}
 											</div>
-										) : (
-											<div>
-												<p className="text-muted">
-													Story analysis will appear here once generation
-													begins.
-												</p>
-												{failedStep === "analysis" && (
-													<button
-														type="button"
-														className="btn btn-sm btn-outline-primary"
-														onClick={() => retryFromStep("analysis")}
-														disabled={isGenerating}
-													>
-														Retry Story Analysis
-													</button>
-												)}
-											</div>
-										)}
-									</div>
+											<h5 className="font-semibold mt-3 mb-2">Setting:</h5>
+											<p>
+												<strong>Location:</strong>{" "}
+												{storyAnalysis.setting.location}
+											</p>
+											<p>
+												<strong>Time Period:</strong>{" "}
+												{storyAnalysis.setting.timePeriod}
+											</p>
+											<p>
+												<strong>Mood:</strong> {storyAnalysis.setting.mood}
+											</p>
+										</div>
+									) : (
+										<div>
+											<p className="text-manga-medium-gray">
+												Story analysis will appear here once generation begins.
+											</p>
+											{failedStep === "analysis" && (
+												<button
+													type="button"
+													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+													onClick={() => retryFromStep("analysis")}
+													disabled={isGenerating}
+												>
+													Retry Story Analysis
+												</button>
+											)}
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -539,74 +659,101 @@ export default function Home() {
 							<div className="accordion-item">
 								<h2 className="accordion-header" id={charactersHeadingId}>
 									<button
-										className="accordion-button collapsed"
+										className="accordion-button"
 										type="button"
-										data-bs-toggle="collapse"
-										data-bs-target={`#${charactersCollapseId}`}
+										onClick={() =>
+											setOpenAccordion(
+												openAccordion === "characters" ? "" : "characters",
+											)
+										}
 									>
-										<span className="me-2">
+										<span className="mr-2">
 											{characterReferences.length > 0 ? "✅" : "⏳"}
 										</span>
 										Step 2: Character Designs
 										<span
-											className={`badge ${characterReferences.length > 0 ? "badge-manga-success" : "badge-manga-warning"} ms-auto me-3`}
+											className={`badge-manga-${characterReferences.length > 0 ? "success" : "warning"} ml-auto mr-3`}
 										>
 											{characterReferences.length > 0 ? "completed" : "pending"}
 										</span>
 									</button>
 								</h2>
 								<div
-									id={charactersCollapseId}
-									className="accordion-collapse collapse"
-									data-bs-parent="#generationAccordion"
+									className={`accordion-body ${openAccordion === "characters" ? "" : "hidden"}`}
 								>
-									<div className="accordion-body">
-										{characterReferences.length > 0 ? (
-											<div className="character-grid">
-												<div className="row">
-													{characterReferences.map((char) => (
-														<div
-															key={char.name}
-															className="col-sm-6 col-lg-4 mb-3"
+									{characterReferences.length > 0 ? (
+										<div className="character-grid">
+											<div className="flex justify-between items-center mb-3">
+												<h5 className="font-semibold">Character Designs</h5>
+												<button
+													type="button"
+													className="btn-manga-primary"
+													onClick={downloadAllCharacters}
+													disabled={isDownloadingCharacters}
+												>
+													{isDownloadingCharacters ? (
+														<>
+															<span
+																className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
+																aria-hidden="true"
+															></span>
+															Creating zip...
+														</>
+													) : (
+														"Download All Characters"
+													)}
+												</button>
+											</div>
+											<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+												{characterReferences.map((char) => (
+													<div key={char.name} className="text-center">
+														<img
+															src={char.image}
+															alt={char.name}
+															className="w-full h-48 object-cover rounded mb-2 border-2 border-manga-black shadow-comic transition-transform hover:scale-105 cursor-pointer"
+															onClick={() =>
+																openImageModal(char.image, char.name)
+															}
+															onKeyDown={(e) => {
+																if (e.key === "Enter" || e.key === " ") {
+																	e.preventDefault();
+																	openImageModal(char.image, char.name);
+																}
+															}}
+														/>
+														<h6 className="font-semibold">{char.name}</h6>
+														<p className="text-sm text-manga-medium-gray mb-2">
+															{char.description}
+														</p>
+														<button
+															type="button"
+															className="btn-manga-outline text-sm"
+															onClick={() => downloadCharacter(char)}
 														>
-															<div className="text-center">
-																<img
-																	src={char.image}
-																	alt={char.name}
-																	className="img-fluid rounded mb-2"
-																	style={{
-																		height: "200px",
-																		objectFit: "cover",
-																	}}
-																/>
-																<h6>{char.name}</h6>
-																<p className="small text-muted">
-																	{char.description}
-																</p>
-															</div>
-														</div>
-													))}
-												</div>
+															Download Character
+														</button>
+													</div>
+												))}
 											</div>
-										) : (
-											<div>
-												<p className="text-muted">
-													Character design images will appear here after story
-													analysis.
-												</p>
-												{failedStep === "characters" && storyAnalysis && (
-													<button
-														type="button"
-														className="btn btn-sm btn-outline-primary"
-														onClick={() => retryFromStep("characters")}
-														disabled={isGenerating}
-													>
-														Retry Character Generation
-													</button>
-												)}
-											</div>
-										)}
-									</div>
+										</div>
+									) : (
+										<div>
+											<p className="text-manga-medium-gray">
+												Character design images will appear here after story
+												analysis.
+											</p>
+											{failedStep === "characters" && storyAnalysis && (
+												<button
+													type="button"
+													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+													onClick={() => retryFromStep("characters")}
+													disabled={isGenerating}
+												>
+													Retry Character Generation
+												</button>
+											)}
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -614,90 +761,86 @@ export default function Home() {
 							<div className="accordion-item">
 								<h2 className="accordion-header" id={layoutHeadingId}>
 									<button
-										className="accordion-button collapsed"
+										className="accordion-button"
 										type="button"
-										data-bs-toggle="collapse"
-										data-bs-target={`#${layoutCollapseId}`}
+										onClick={() =>
+											setOpenAccordion(
+												openAccordion === "layout" ? "" : "layout",
+											)
+										}
 									>
-										<span className="me-2">{storyBreakdown ? "✅" : "⏳"}</span>
+										<span className="mr-2">{storyBreakdown ? "✅" : "⏳"}</span>
 										Step 3: Comic Layout Plan
 										<span
-											className={`badge ${storyBreakdown ? "badge-manga-success" : "badge-manga-warning"} ms-auto me-3`}
+											className={`badge-manga-${storyBreakdown ? "success" : "warning"} ml-auto mr-3`}
 										>
 											{storyBreakdown ? "completed" : "pending"}
 										</span>
 									</button>
 								</h2>
 								<div
-									id={layoutCollapseId}
-									className="accordion-collapse collapse"
-									data-bs-parent="#generationAccordion"
+									className={`accordion-body ${openAccordion === "layout" ? "" : "hidden"}`}
 								>
-									<div className="accordion-body">
-										{storyBreakdown ? (
-											<div>
-												<h5>
-													Panel Sequence ({storyBreakdown.panels.length} panels)
-												</h5>
-												<div className="row">
-													{storyBreakdown.panels.map((panel) => (
-														<div
-															key={`panel-${panel.panelNumber}`}
-															className="col-sm-6 mb-3"
-														>
-															<div className="card card-manga">
-																<div className="card-body">
-																	<h6 className="card-title">
-																		Panel {panel.panelNumber}
-																	</h6>
-																	<p className="card-text small">
-																		{panel.sceneDescription}
-																	</p>
-																	{panel.dialogue && (
-																		<p className="card-text speech-bubble small">
-																			"{panel.dialogue}"
-																		</p>
-																	)}
-																	<div className="small text-muted">
-																		<div>
-																			<strong>Characters:</strong>{" "}
-																			{panel.characters.join(", ")}
-																		</div>
-																		<div>
-																			<strong>Camera:</strong>{" "}
-																			{panel.cameraAngle}
-																		</div>
-																		<div>
-																			<strong>Mood:</strong> {panel.visualMood}
-																		</div>
-																	</div>
+									{storyBreakdown ? (
+										<div>
+											<h5 className="font-semibold mb-2">
+												Panel Sequence ({storyBreakdown.panels.length} panels)
+											</h5>
+											<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+												{storyBreakdown.panels.map((panel) => (
+													<div
+														key={`panel-${panel.panelNumber}`}
+														className="card-manga"
+													>
+														<div className="card-body">
+															<h6 className="card-title">
+																Panel {panel.panelNumber}
+															</h6>
+															<p className="card-text text-sm">
+																{panel.sceneDescription}
+															</p>
+															{panel.dialogue && (
+																<p className="card-text speech-bubble text-sm">
+																	"{panel.dialogue}"
+																</p>
+															)}
+															<div className="text-sm text-manga-medium-gray">
+																<div>
+																	<strong>Characters:</strong>{" "}
+																	{panel.characters.join(", ")}
+																</div>
+																<div>
+																	<strong>Camera:</strong> {panel.cameraAngle}
+																</div>
+																<div>
+																	<strong>Mood:</strong> {panel.visualMood}
 																</div>
 															</div>
 														</div>
-													))}
-												</div>
+													</div>
+												))}
 											</div>
-										) : (
-											<div>
-												<p className="text-muted">
-													Comic layout plan will appear here after character
-													designs are complete.
-												</p>
-												{failedStep === "layout" &&
-													storyAnalysis &&
-													characterReferences.length > 0 && (
-														<button
-															type="button"
-															className="btn btn-sm btn-outline-primary"
-															onClick={() => retryFromStep("layout")}
-															disabled={isGenerating}
-														>
-															Retry Comic Layout
-														</button>
-													)}
-											</div>
-										)}
-									</div>
+										</div>
+									) : (
+										<div>
+											<p className="text-manga-medium-gray">
+												Comic layout plan will appear here after character
+												designs are complete.
+											</p>
+											{failedStep === "layout" &&
+												storyAnalysis &&
+												characterReferences.length > 0 && (
+													<button
+														type="button"
+														className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+														onClick={() => retryFromStep("layout")}
+														disabled={isGenerating}
+													>
+														Retry Comic Layout
+													</button>
+												)}
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -705,86 +848,111 @@ export default function Home() {
 							<div className="accordion-item">
 								<h2 className="accordion-header" id={panelsHeadingId}>
 									<button
-										className="accordion-button collapsed"
+										className="accordion-button"
 										type="button"
-										data-bs-toggle="collapse"
-										data-bs-target={`#${panelsCollapseId}`}
+										onClick={() =>
+											setOpenAccordion(
+												openAccordion === "panels" ? "" : "panels",
+											)
+										}
 									>
-										<span className="me-2">
+										<span className="mr-2">
 											{generatedPanels.length > 0 ? "✅" : "⏳"}
 										</span>
 										Step 4: Generated Panels
 										<span
-											className={`badge ${generatedPanels.length > 0 ? "badge-manga-success" : "badge-manga-warning"} ms-auto me-3`}
+											className={`badge-manga-${generatedPanels.length > 0 ? "success" : "warning"} ml-auto mr-3`}
 										>
 											{generatedPanels.length > 0 ? "completed" : "pending"}
 										</span>
 									</button>
 								</h2>
 								<div
-									id={panelsCollapseId}
-									className="accordion-collapse collapse"
-									data-bs-parent="#generationAccordion"
+									className={`accordion-body ${openAccordion === "panels" ? "" : "hidden"}`}
 								>
-									<div className="accordion-body">
-										{generatedPanels.length > 0 ? (
-											<div>
-												<div className="d-flex justify-content-between align-items-center mb-3">
-													<h5>Your Comic Panels</h5>
-													<button
-														type="button"
-														className="btn btn-manga-primary"
-														onClick={downloadAllPanels}
-													>
-														Download All Panels
-													</button>
-												</div>
-												<div className="row">
-													{generatedPanels.map((panel) => (
-														<div
-															key={`generated-panel-${panel.panelNumber}`}
-															className="col-lg-6 mb-4"
-														>
-															<div className="text-center">
-																<img
-																	src={panel.image}
-																	alt={`Comic Panel ${panel.panelNumber}`}
-																	className="img-fluid rounded comic-panel mb-2"
-																/>
-																<h6>Panel {panel.panelNumber}</h6>
-																<button
-																	type="button"
-																	className="btn btn-manga-outline btn-sm"
-																	onClick={() => downloadPanel(panel)}
-																>
-																	Download Panel
-																</button>
-															</div>
-														</div>
-													))}
-												</div>
+									{generatedPanels.length > 0 ? (
+										<div>
+											<div className="flex justify-between items-center mb-3">
+												<h5 className="font-semibold">Your Comic Panels</h5>
+												<button
+													type="button"
+													className="btn-manga-primary"
+													onClick={downloadAllPanels}
+													disabled={isDownloadingPanels}
+												>
+													{isDownloadingPanels ? (
+														<>
+															<span
+																className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
+																aria-hidden="true"
+															></span>
+															Creating zip...
+														</>
+													) : (
+														"Download All Panels"
+													)}
+												</button>
 											</div>
-										) : (
-											<div>
-												<p className="text-muted">
-													Your finished comic panels will appear here!
-												</p>
-												{failedStep === "panels" &&
-													storyAnalysis &&
-													characterReferences.length > 0 &&
-													storyBreakdown && (
+											<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+												{generatedPanels.map((panel) => (
+													<div
+														key={`generated-panel-${panel.panelNumber}`}
+														className="text-center"
+													>
+														<img
+															src={panel.image}
+															alt={`Comic Panel ${panel.panelNumber}`}
+															className="w-full rounded mb-2 comic-panel cursor-pointer transition-transform hover:scale-[1.02]"
+															onClick={() =>
+																openImageModal(
+																	panel.image,
+																	`Comic Panel ${panel.panelNumber}`,
+																)
+															}
+															onKeyDown={(e) => {
+																if (e.key === "Enter" || e.key === " ") {
+																	e.preventDefault();
+																	openImageModal(
+																		panel.image,
+																		`Comic Panel ${panel.panelNumber}`,
+																	);
+																}
+															}}
+														/>
+														<h6 className="font-semibold">
+															Panel {panel.panelNumber}
+														</h6>
 														<button
 															type="button"
-															className="btn btn-sm btn-outline-primary"
-															onClick={() => retryFromStep("panels")}
-															disabled={isGenerating}
+															className="btn-manga-outline text-sm"
+															onClick={() => downloadPanel(panel)}
 														>
-															Retry Panel Generation
+															Download Panel
 														</button>
-													)}
+													</div>
+												))}
 											</div>
-										)}
-									</div>
+										</div>
+									) : (
+										<div>
+											<p className="text-manga-medium-gray">
+												Your finished comic panels will appear here!
+											</p>
+											{failedStep === "panels" &&
+												storyAnalysis &&
+												characterReferences.length > 0 &&
+												storyBreakdown && (
+													<button
+														type="button"
+														className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+														onClick={() => retryFromStep("panels")}
+														disabled={isGenerating}
+													>
+														Retry Panel Generation
+													</button>
+												)}
+										</div>
+									)}
 								</div>
 							</div>
 						</div>
@@ -806,6 +974,51 @@ export default function Home() {
 				</svg>
 				Report Issue
 			</a>
+
+			{/* Image Modal */}
+			{modalImage && (
+				<div
+					className="image-modal-overlay"
+					onClick={closeImageModal}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") {
+							closeImageModal();
+						}
+					}}
+					role="dialog"
+					aria-modal="true"
+					aria-label="Image viewer"
+					tabIndex={-1}
+				>
+					<div
+						className="image-modal-content"
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.stopPropagation()}
+						role="document"
+					>
+						<button
+							type="button"
+							className="image-modal-close"
+							onClick={closeImageModal}
+							aria-label="Close modal"
+						>
+							<svg
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								aria-hidden="true"
+							>
+								<title>Close</title>
+								<path d="M18 6L6 18M6 6l12 12" />
+							</svg>
+						</button>
+						<img src={modalImage} alt={modalAlt} className="image-modal-img" />
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -1,3 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Bangers:wght@400&family=Comfortaa:wght@300;400;700&family=Permanent+Marker&family=M+PLUS+1:wght@300;400;700&family=Sawarabi+Gothic&family=Zen+Old+Mincho:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-manga-white: #FFFFFF;
+  --color-manga-off-white: #FAFAFA;
+  --color-manga-light-gray: #F5F5F5;
+  --color-manga-gray: #E0E0E0;
+  --color-manga-medium-gray: #9E9E9E;
+  --color-manga-dark-gray: #424242;
+  --color-manga-charcoal: #2E2E2E;
+  --color-manga-black: #000000;
+  --color-manga-success: #2E7D32;
+  --color-manga-warning: #F57C00;
+  --color-manga-danger: #C62828;
+  --color-manga-info: #1976D2;
+  --color-manga-accent-red: #D32F2F;
+  --color-manga-accent-gold: #FF8F00;
+  
+  --font-family-display-comic: "Bangers", cursive;
+  --font-family-body-comic: "Comfortaa", sans-serif;
+  --font-family-handwriting-comic: "Permanent Marker", cursive;
+  --font-family-display-manga: "Sawarabi Gothic", "M PLUS 1", sans-serif;
+  --font-family-body-manga: "M PLUS 1", "Sawarabi Gothic", sans-serif;
+  --font-family-handwriting-manga: "Zen Old Mincho", serif;
+  
+  --radius-comic: 8px;
+  --radius-manga-minimal: 4px;
+  
+  --shadow-comic: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-manga-subtle: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -11,7 +44,6 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-manga-off-white);
+  color: var(--color-manga-charcoal);
 }
