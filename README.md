@@ -1,4 +1,4 @@
-# Story to Comic Generator
+# Story to Manga Generator
 
 Transform your written stories into visual manga or comic book pages using Google Gemini 2.5 AI.
 
