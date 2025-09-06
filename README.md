@@ -66,16 +66,6 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 4. Watch as character designs appear first, then comic pages
 5. Download individual pages or all pages at once
 
-## API Rate Limits
-
-**Free Tier (Google AI):**
-- 10 requests per minute
-- 200,000 tokens per minute
-- 100 requests per day
-
-**Cost:**
-- ~$0.039 per image generated
-
 ## Deployment to AWS Amplify
 
 1. Push your code to GitHub
