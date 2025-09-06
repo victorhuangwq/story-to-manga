@@ -150,7 +150,6 @@ Generate a single comic panel image with proper framing and composition.
 				throw new Error("No content parts received");
 			}
 
-			const imageFound = false;
 			for (const part of candidate.content.parts) {
 				if (part.text) {
 					panelLogger.info(
@@ -194,9 +193,7 @@ Generate a single comic panel image with proper framing and composition.
 				}
 			}
 
-			if (!imageFound) {
-				throw new Error("No image data received in response parts");
-			}
+			throw new Error("No image data received in response parts");
 		} catch (error) {
 			logError(panelLogger, error, "panel generation", {
 				panel_number: panel.panelNumber,
