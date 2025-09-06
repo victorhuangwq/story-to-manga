@@ -898,13 +898,37 @@ export default function Home() {
 										}
 									>
 										<span className="mr-2">
-											{generatedPanels.length > 0 ? "✅" : "⏳"}
+											{(() => {
+												const expectedCount =
+													storyBreakdown?.panels.length || 0;
+												const currentCount = generatedPanels.length;
+												if (currentCount === 0) return "⏳";
+												if (currentCount === expectedCount && expectedCount > 0)
+													return "✅";
+												return "🔄";
+											})()}
 										</span>
 										Step 4: Generated Panels
 										<span
-											className={`badge-manga-${generatedPanels.length > 0 ? "success" : "warning"} ml-auto mr-3`}
+											className={`badge-manga-${(() => {
+												const expectedCount =
+													storyBreakdown?.panels.length || 0;
+												const currentCount = generatedPanels.length;
+												if (currentCount === 0) return "warning";
+												if (currentCount === expectedCount && expectedCount > 0)
+													return "success";
+												return "info";
+											})()} ml-auto mr-3`}
 										>
-											{generatedPanels.length > 0 ? "completed" : "pending"}
+											{(() => {
+												const expectedCount =
+													storyBreakdown?.panels.length || 0;
+												const currentCount = generatedPanels.length;
+												if (currentCount === 0) return "pending";
+												if (currentCount === expectedCount && expectedCount > 0)
+													return "completed";
+												return "in-progress";
+											})()}
 										</span>
 									</button>
 								</h2>
