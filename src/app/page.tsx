@@ -51,7 +51,28 @@ export default function Home() {
 	const [failedStep, setFailedStep] = useState<FailedStep>(null);
 
 	// Accordion state
-	const [openAccordion, setOpenAccordion] = useState<string>("analysis");
+	const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set());
+
+	// Helper functions for accordion management
+	const toggleAccordionSection = (section: string) => {
+		setOpenAccordions((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(section)) {
+				newSet.delete(section);
+			} else {
+				newSet.add(section);
+			}
+			return newSet;
+		});
+	};
+
+	const expandAllAccordions = () => {
+		setOpenAccordions(new Set(["analysis", "characters", "layout", "panels"]));
+	};
+
+	const collapseAllAccordions = () => {
+		setOpenAccordions(new Set());
+	};
 
 	const wordCount = story
 		.trim()
@@ -88,7 +109,7 @@ export default function Home() {
 
 			const { analysis } = await analysisResponse.json();
 			setStoryAnalysis(analysis);
-			setOpenAccordion("analysis"); // Auto-expand analysis section
+			setOpenAccordions(new Set(["analysis"])); // Auto-expand analysis section
 
 			// Step 2: Generate character references
 			setCurrentStepText("Creating character designs...");
@@ -108,7 +129,7 @@ export default function Home() {
 
 			const { characterReferences } = await charRefResponse.json();
 			setCharacterReferences(characterReferences);
-			setOpenAccordion("characters"); // Auto-expand characters section
+			setOpenAccordions(new Set(["characters"])); // Auto-expand characters section
 
 			// Step 3: Break down story into panels
 			setCurrentStepText("Planning comic layout...");
@@ -129,7 +150,7 @@ export default function Home() {
 
 			const { storyBreakdown: breakdown } = await storyBreakdownResponse.json();
 			setStoryBreakdown(breakdown);
-			setOpenAccordion("layout"); // Auto-expand layout section
+			setOpenAccordions(new Set(["layout"])); // Auto-expand layout section
 
 			// Step 4: Generate comic panels
 			const panels: GeneratedPanel[] = [];
@@ -161,7 +182,7 @@ export default function Home() {
 
 				// Auto-expand panels section after first panel is generated
 				if (i === 0) {
-					setOpenAccordion("panels");
+					setOpenAccordions(new Set(["panels"]));
 				}
 			}
 
@@ -346,7 +367,7 @@ export default function Home() {
 
 		const { analysis } = await response.json();
 		setStoryAnalysis(analysis);
-		setOpenAccordion("analysis"); // Auto-expand analysis section on retry
+		setOpenAccordions(new Set(["analysis"])); // Auto-expand analysis section on retry
 	};
 
 	const retryCharacters = async () => {
@@ -369,7 +390,7 @@ export default function Home() {
 
 		const { characterReferences } = await response.json();
 		setCharacterReferences(characterReferences);
-		setOpenAccordion("characters"); // Auto-expand characters section on retry
+		setOpenAccordions(new Set(["characters"])); // Auto-expand characters section on retry
 	};
 
 	const retryLayout = async () => {
@@ -393,7 +414,7 @@ export default function Home() {
 
 		const { storyBreakdown: breakdown } = await response.json();
 		setStoryBreakdown(breakdown);
-		setOpenAccordion("layout"); // Auto-expand layout section on retry
+		setOpenAccordions(new Set(["layout"])); // Auto-expand layout section on retry
 	};
 
 	const retryPanels = async () => {
@@ -430,7 +451,7 @@ export default function Home() {
 
 			// Auto-expand panels section after first panel is generated
 			if (i === 0) {
-				setOpenAccordion("panels");
+				setOpenAccordions(new Set(["panels"]));
 			}
 		}
 	};
@@ -618,7 +639,28 @@ export default function Home() {
 				{/* Right Panel - Generation Results */}
 				<div className="w-full lg:w-2/3">
 					<div className="comic-panel h-full">
-						<h2 className="text-xl mb-4">Behind the Scenes</h2>
+						<div className="flex justify-between items-center mb-4">
+							<h2 className="text-xl">Behind the Scenes</h2>
+							<button
+								type="button"
+								className="btn-manga-outline text-sm"
+								onClick={() => {
+									const hasAnyOpen = openAccordions.size > 0;
+									if (hasAnyOpen) {
+										collapseAllAccordions();
+									} else {
+										expandAllAccordions();
+									}
+								}}
+								title={
+									openAccordions.size > 0
+										? "Collapse all sections"
+										: "Expand all sections"
+								}
+							>
+								{openAccordions.size > 0 ? "Collapse All" : "Expand All"}
+							</button>
+						</div>
 
 						<div className="accordion-manga space-y-4">
 							{/* Step 1: Story Analysis */}
@@ -627,11 +669,7 @@ export default function Home() {
 									<button
 										className="accordion-button"
 										type="button"
-										onClick={() =>
-											setOpenAccordion(
-												openAccordion === "analysis" ? "" : "analysis",
-											)
-										}
+										onClick={() => toggleAccordionSection("analysis")}
 									>
 										<span className="mr-2">{storyAnalysis ? "✅" : "⏳"}</span>
 										Step 1: Story Analysis
@@ -643,7 +681,7 @@ export default function Home() {
 									</button>
 								</h2>
 								<div
-									className={`accordion-body ${openAccordion === "analysis" ? "" : "hidden"}`}
+									className={`accordion-body ${openAccordions.has("analysis") ? "" : "hidden"}`}
 								>
 									{storyAnalysis ? (
 										<div>
@@ -702,11 +740,7 @@ export default function Home() {
 									<button
 										className="accordion-button"
 										type="button"
-										onClick={() =>
-											setOpenAccordion(
-												openAccordion === "characters" ? "" : "characters",
-											)
-										}
+										onClick={() => toggleAccordionSection("characters")}
 									>
 										<span className="mr-2">
 											{characterReferences.length > 0 ? "✅" : "⏳"}
@@ -720,7 +754,7 @@ export default function Home() {
 									</button>
 								</h2>
 								<div
-									className={`accordion-body ${openAccordion === "characters" ? "" : "hidden"}`}
+									className={`accordion-body ${openAccordions.has("characters") ? "" : "hidden"}`}
 								>
 									{characterReferences.length > 0 ? (
 										<div className="character-grid">
@@ -804,11 +838,7 @@ export default function Home() {
 									<button
 										className="accordion-button"
 										type="button"
-										onClick={() =>
-											setOpenAccordion(
-												openAccordion === "layout" ? "" : "layout",
-											)
-										}
+										onClick={() => toggleAccordionSection("layout")}
 									>
 										<span className="mr-2">{storyBreakdown ? "✅" : "⏳"}</span>
 										Step 3: Comic Layout Plan
@@ -820,7 +850,7 @@ export default function Home() {
 									</button>
 								</h2>
 								<div
-									className={`accordion-body ${openAccordion === "layout" ? "" : "hidden"}`}
+									className={`accordion-body ${openAccordions.has("layout") ? "" : "hidden"}`}
 								>
 									{storyBreakdown ? (
 										<div>
@@ -891,11 +921,7 @@ export default function Home() {
 									<button
 										className="accordion-button"
 										type="button"
-										onClick={() =>
-											setOpenAccordion(
-												openAccordion === "panels" ? "" : "panels",
-											)
-										}
+										onClick={() => toggleAccordionSection("panels")}
 									>
 										<span className="mr-2">
 											{(() => {
@@ -933,7 +959,7 @@ export default function Home() {
 									</button>
 								</h2>
 								<div
-									className={`accordion-body ${openAccordion === "panels" ? "" : "hidden"}`}
+									className={`accordion-body ${openAccordions.has("panels") ? "" : "hidden"}`}
 								>
 									{generatedPanels.length > 0 ? (
 										<div>
