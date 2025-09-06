@@ -343,6 +343,23 @@ export default function Home() {
 	const layoutHeadingId = useId();
 	const panelsHeadingId = useId();
 
+	// Simple rate limit error handler
+	const handleApiError = async (
+		response: Response,
+		defaultMessage: string,
+	): Promise<string> => {
+		if (response.status === 429) {
+			try {
+				const data = await response.json();
+				const retryAfter = data.retryAfter || 60;
+				return `Rate limit exceeded. Please wait ${retryAfter} seconds and try again.`;
+			} catch {
+				return "Rate limit exceeded. Please wait a minute and try again.";
+			}
+		}
+		return defaultMessage;
+	};
+
 	// Main state
 	const [story, setStory] = useState("");
 	const [style, setStyle] = useState<ComicStyle>("manga");
@@ -442,7 +459,9 @@ export default function Home() {
 			});
 
 			if (!analysisResponse.ok) {
-				throw new Error("Failed to analyze story");
+				throw new Error(
+					await handleApiError(analysisResponse, "Failed to analyze story"),
+				);
 			}
 
 			const { analysis } = await analysisResponse.json();
@@ -462,7 +481,12 @@ export default function Home() {
 			});
 
 			if (!charRefResponse.ok) {
-				throw new Error("Failed to generate character references");
+				throw new Error(
+					await handleApiError(
+						charRefResponse,
+						"Failed to generate character references",
+					),
+				);
 			}
 
 			const { characterReferences } = await charRefResponse.json();
@@ -483,7 +507,12 @@ export default function Home() {
 			});
 
 			if (!storyBreakdownResponse.ok) {
-				throw new Error("Failed to break down story");
+				throw new Error(
+					await handleApiError(
+						storyBreakdownResponse,
+						"Failed to break down story",
+					),
+				);
 			}
 
 			const { storyBreakdown: breakdown } = await storyBreakdownResponse.json();
@@ -511,7 +540,12 @@ export default function Home() {
 				});
 
 				if (!panelResponse.ok) {
-					throw new Error(`Failed to generate panel ${i + 1}`);
+					throw new Error(
+						await handleApiError(
+							panelResponse,
+							`Failed to generate panel ${i + 1}`,
+						),
+					);
 				}
 
 				const { generatedPanel } = await panelResponse.json();
@@ -700,7 +734,9 @@ export default function Home() {
 		});
 
 		if (!response.ok) {
-			throw new Error("Failed to analyze story");
+			throw new Error(
+				await handleApiError(response, "Failed to analyze story"),
+			);
 		}
 
 		const { analysis } = await response.json();
@@ -723,7 +759,12 @@ export default function Home() {
 		});
 
 		if (!response.ok) {
-			throw new Error("Failed to generate character references");
+			throw new Error(
+				await handleApiError(
+					response,
+					"Failed to generate character references",
+				),
+			);
 		}
 
 		const { characterReferences } = await response.json();
@@ -747,7 +788,9 @@ export default function Home() {
 		});
 
 		if (!response.ok) {
-			throw new Error("Failed to break down story");
+			throw new Error(
+				await handleApiError(response, "Failed to break down story"),
+			);
 		}
 
 		const { storyBreakdown: breakdown } = await response.json();
@@ -780,7 +823,9 @@ export default function Home() {
 			});
 
 			if (!response.ok) {
-				throw new Error(`Failed to generate panel ${i + 1}`);
+				throw new Error(
+					await handleApiError(response, `Failed to generate panel ${i + 1}`),
+				);
 			}
 
 			const { generatedPanel } = await response.json();
@@ -810,7 +855,9 @@ export default function Home() {
 			});
 
 			if (!response.ok) {
-				throw new Error("Failed to re-analyze story");
+				throw new Error(
+					await handleApiError(response, "Failed to re-analyze story"),
+				);
 			}
 
 			const { analysis } = await response.json();
@@ -844,7 +891,12 @@ export default function Home() {
 			});
 
 			if (!response.ok) {
-				throw new Error("Failed to regenerate character references");
+				throw new Error(
+					await handleApiError(
+						response,
+						"Failed to regenerate character references",
+					),
+				);
 			}
 
 			const { characterReferences } = await response.json();
@@ -883,7 +935,12 @@ export default function Home() {
 			});
 
 			if (!response.ok) {
-				throw new Error("Failed to regenerate story breakdown");
+				throw new Error(
+					await handleApiError(
+						response,
+						"Failed to regenerate story breakdown",
+					),
+				);
 			}
 
 			const { storyBreakdown: breakdown } = await response.json();
@@ -930,7 +987,12 @@ export default function Home() {
 				});
 
 				if (!response.ok) {
-					throw new Error(`Failed to regenerate panel ${i + 1}`);
+					throw new Error(
+						await handleApiError(
+							response,
+							`Failed to regenerate panel ${i + 1}`,
+						),
+					);
 				}
 
 				const { generatedPanel } = await response.json();
