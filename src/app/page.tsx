@@ -12,6 +12,323 @@ import type {
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
+interface RerunButtonProps {
+	onClick: () => void;
+	isLoading: boolean;
+	disabled?: boolean;
+	label?: string;
+	loadingText?: string;
+}
+
+function RerunButton({
+	onClick,
+	isLoading,
+	disabled = false,
+	label = "Re-run",
+	loadingText = "Re-running...",
+}: RerunButtonProps) {
+	return (
+		<button
+			type="button"
+			className="btn-manga-secondary"
+			onClick={onClick}
+			disabled={isLoading || disabled}
+		>
+			{isLoading ? (
+				<>
+					<LoadingSpinner size="small" />
+					{loadingText}
+				</>
+			) : (
+				`🔄 ${label}`
+			)}
+		</button>
+	);
+}
+
+interface LoadingSpinnerProps {
+	size?: "small" | "medium";
+	color?: "white" | "current";
+	className?: string;
+}
+
+function LoadingSpinner({
+	size = "medium",
+	color = "current",
+	className = "",
+}: LoadingSpinnerProps) {
+	const sizeClasses = {
+		small: "h-3 w-3",
+		medium: "h-4 w-4",
+	};
+
+	const borderColorClasses = {
+		white: "border-b-2 border-white",
+		current: "border-b-2 border-current",
+	};
+
+	return (
+		<span
+			className={`inline-block animate-spin rounded-full ${sizeClasses[size]} ${borderColorClasses[color]} mr-2 ${className}`}
+			aria-hidden="true"
+		></span>
+	);
+}
+
+interface DownloadButtonProps {
+	onClick: () => void;
+	isLoading: boolean;
+	disabled?: boolean;
+	label: string;
+	loadingText: string;
+	variant?: "primary" | "outline";
+}
+
+function DownloadButton({
+	onClick,
+	isLoading,
+	disabled = false,
+	label,
+	loadingText,
+	variant = "primary",
+}: DownloadButtonProps) {
+	const baseClass =
+		variant === "primary" ? "btn-manga-primary" : "btn-manga-outline text-sm";
+
+	return (
+		<button
+			type="button"
+			className={baseClass}
+			onClick={onClick}
+			disabled={isLoading || disabled}
+		>
+			{isLoading ? (
+				<>
+					<LoadingSpinner
+						size="small"
+						color={variant === "primary" ? "white" : "current"}
+					/>
+					{loadingText}
+				</>
+			) : (
+				label
+			)}
+		</button>
+	);
+}
+
+interface StatusBadgeProps {
+	status: "pending" | "completed" | "in-progress";
+}
+
+function StatusBadge({ status }: StatusBadgeProps) {
+	const statusConfig = {
+		pending: { class: "badge-manga-warning", text: "pending" },
+		completed: { class: "badge-manga-success", text: "completed" },
+		"in-progress": { class: "badge-manga-info", text: "in-progress" },
+	};
+
+	const config = statusConfig[status];
+
+	return <span className={`${config.class} ml-auto mr-3`}>{config.text}</span>;
+}
+
+interface AccordionSectionProps {
+	id: string;
+	title: string;
+	stepNumber: number;
+	isCompleted: boolean;
+	isInProgress?: boolean;
+	isOpen: boolean;
+	onToggle: () => void;
+	children: React.ReactNode;
+}
+
+function AccordionSection({
+	id,
+	title,
+	stepNumber,
+	isCompleted,
+	isInProgress = false,
+	isOpen,
+	onToggle,
+	children,
+}: AccordionSectionProps) {
+	const getStatusIcon = () => {
+		if (isCompleted) return "✅";
+		if (isInProgress) return "🔄";
+		return "⏳";
+	};
+
+	const getStatusBadge = () => {
+		if (isCompleted) return "completed";
+		if (isInProgress) return "in-progress";
+		return "pending";
+	};
+
+	return (
+		<div className="accordion-item">
+			<h2 className="accordion-header" id={id}>
+				<button className="accordion-button" type="button" onClick={onToggle}>
+					<span className="mr-2">{getStatusIcon()}</span>
+					Step {stepNumber}: {title}
+					<StatusBadge status={getStatusBadge()} />
+				</button>
+			</h2>
+			<div className={`accordion-body ${isOpen ? "" : "hidden"}`}>
+				{children}
+			</div>
+		</div>
+	);
+}
+
+interface CharacterCardProps {
+	character: {
+		name: string;
+		physicalDescription?: string;
+		role?: string;
+		image?: string;
+		description?: string;
+	};
+	showImage?: boolean;
+	onImageClick?: (imageUrl: string, name: string) => void;
+	onDownload?: () => void;
+}
+
+function CharacterCard({
+	character,
+	showImage = false,
+	onImageClick,
+	onDownload,
+}: CharacterCardProps) {
+	return (
+		<div className={showImage ? "text-center" : "card-manga"}>
+			{showImage && character.image ? (
+				<>
+					<img
+						src={character.image}
+						alt={character.name}
+						className="w-full h-48 object-cover rounded mb-2 border-2 border-manga-black shadow-comic transition-transform hover:scale-105 cursor-pointer"
+						onClick={() => onImageClick?.(character.image!, character.name)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								onImageClick?.(character.image!, character.name);
+							}
+						}}
+					/>
+					<h6 className="font-semibold">{character.name}</h6>
+					<p className="text-sm text-manga-medium-gray mb-2">
+						{character.description}
+					</p>
+					{onDownload && (
+						<DownloadButton
+							onClick={onDownload}
+							isLoading={false}
+							label="Download Character"
+							loadingText=""
+							variant="outline"
+						/>
+					)}
+				</>
+			) : (
+				<div className="card-body">
+					<h6 className="card-title">{character.name}</h6>
+					<p className="card-text text-sm">{character.physicalDescription}</p>
+					<p className="card-text">
+						<em>{character.role}</em>
+					</p>
+				</div>
+			)}
+		</div>
+	);
+}
+
+interface PanelCardProps {
+	panel: {
+		panelNumber: number;
+		sceneDescription?: string;
+		dialogue?: string;
+		characters?: string[];
+		cameraAngle?: string;
+		visualMood?: string;
+		image?: string;
+	};
+	showImage?: boolean;
+	onImageClick?: (imageUrl: string, altText: string) => void;
+	onDownload?: () => void;
+}
+
+function PanelCard({
+	panel,
+	showImage = false,
+	onImageClick,
+	onDownload,
+}: PanelCardProps) {
+	return (
+		<div className={showImage ? "text-center" : "card-manga"}>
+			{showImage && panel.image ? (
+				<>
+					<img
+						src={panel.image}
+						alt={`Comic Panel ${panel.panelNumber}`}
+						className="w-full rounded mb-2 comic-panel cursor-pointer transition-transform hover:scale-[1.02]"
+						onClick={() =>
+							onImageClick?.(panel.image!, `Comic Panel ${panel.panelNumber}`)
+						}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								onImageClick?.(
+									panel.image!,
+									`Comic Panel ${panel.panelNumber}`,
+								);
+							}
+						}}
+					/>
+					<h6 className="font-semibold">Panel {panel.panelNumber}</h6>
+					{onDownload && (
+						<DownloadButton
+							onClick={onDownload}
+							isLoading={false}
+							label="Download Panel"
+							loadingText=""
+							variant="outline"
+						/>
+					)}
+				</>
+			) : (
+				<div className="card-body">
+					<h6 className="card-title">Panel {panel.panelNumber}</h6>
+					<p className="card-text text-sm">{panel.sceneDescription}</p>
+					{panel.dialogue && (
+						<p className="card-text speech-bubble text-sm">
+							"{panel.dialogue}"
+						</p>
+					)}
+					<div className="text-sm text-manga-medium-gray">
+						{panel.characters && (
+							<div>
+								<strong>Characters:</strong> {panel.characters.join(", ")}
+							</div>
+						)}
+						{panel.cameraAngle && (
+							<div>
+								<strong>Camera:</strong> {panel.cameraAngle}
+							</div>
+						)}
+						{panel.visualMood && (
+							<div>
+								<strong>Mood:</strong> {panel.visualMood}
+							</div>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 export default function Home() {
 	// Generate unique IDs for form elements
 	const mangaRadioId = useId();
@@ -35,6 +352,12 @@ export default function Home() {
 	// Download state
 	const [isDownloadingCharacters, setIsDownloadingCharacters] = useState(false);
 	const [isDownloadingPanels, setIsDownloadingPanels] = useState(false);
+
+	// Individual section re-run loading states
+	const [isRerunningAnalysis, setIsRerunningAnalysis] = useState(false);
+	const [isRerunningCharacters, setIsRerunningCharacters] = useState(false);
+	const [isRerunningLayout, setIsRerunningLayout] = useState(false);
+	const [isRerunningPanels, setIsRerunningPanels] = useState(false);
 
 	// Generated content state
 	const [storyAnalysis, setStoryAnalysis] = useState<StoryAnalysis | null>(
@@ -72,6 +395,17 @@ export default function Home() {
 
 	const collapseAllAccordions = () => {
 		setOpenAccordions(new Set());
+	};
+
+	// Helper functions for panel status logic
+	const getPanelStatus = () => {
+		const expectedCount = storyBreakdown?.panels.length || 0;
+		const currentCount = generatedPanels.length;
+
+		if (currentCount === 0) return { isCompleted: false, isInProgress: false };
+		if (currentCount === expectedCount && expectedCount > 0)
+			return { isCompleted: true, isInProgress: false };
+		return { isCompleted: false, isInProgress: true };
 	};
 
 	const wordCount = story
@@ -456,6 +790,165 @@ export default function Home() {
 		}
 	};
 
+	// Individual section re-run functions
+	const rerunAnalysis = async () => {
+		if (!story.trim()) return;
+
+		setIsRerunningAnalysis(true);
+		setError(null);
+
+		try {
+			setCurrentStepText("Re-analyzing your story...");
+			const response = await fetch("/api/analyze-story", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ story, style }),
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to re-analyze story");
+			}
+
+			const { analysis } = await response.json();
+			setStoryAnalysis(analysis);
+			setOpenAccordions(new Set(["analysis"]));
+			setCurrentStepText("Analysis updated! 🎉");
+		} catch (error) {
+			console.error("Re-run analysis error:", error);
+			setError(error instanceof Error ? error.message : "Re-analysis failed");
+		} finally {
+			setIsRerunningAnalysis(false);
+		}
+	};
+
+	const rerunCharacterDesigns = async () => {
+		if (!storyAnalysis) return;
+
+		setIsRerunningCharacters(true);
+		setError(null);
+
+		try {
+			setCurrentStepText("Re-creating character designs...");
+			const response = await fetch("/api/generate-character-refs", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					characters: storyAnalysis.characters,
+					setting: storyAnalysis.setting,
+					style,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to regenerate character references");
+			}
+
+			const { characterReferences } = await response.json();
+			setCharacterReferences(characterReferences);
+			setOpenAccordions(new Set(["characters"]));
+			setCurrentStepText("Character designs updated! 🎉");
+		} catch (error) {
+			console.error("Re-run characters error:", error);
+			setError(
+				error instanceof Error
+					? error.message
+					: "Character regeneration failed",
+			);
+		} finally {
+			setIsRerunningCharacters(false);
+		}
+	};
+
+	const rerunLayoutPlan = async () => {
+		if (!storyAnalysis) return;
+
+		setIsRerunningLayout(true);
+		setError(null);
+
+		try {
+			setCurrentStepText("Re-planning comic layout...");
+			const response = await fetch("/api/chunk-story", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					story,
+					characters: storyAnalysis.characters,
+					setting: storyAnalysis.setting,
+					style,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to regenerate story breakdown");
+			}
+
+			const { storyBreakdown: breakdown } = await response.json();
+			setStoryBreakdown(breakdown);
+			setOpenAccordions(new Set(["layout"]));
+			setCurrentStepText("Layout plan updated! 🎉");
+		} catch (error) {
+			console.error("Re-run layout error:", error);
+			setError(
+				error instanceof Error ? error.message : "Layout regeneration failed",
+			);
+		} finally {
+			setIsRerunningLayout(false);
+		}
+	};
+
+	const rerunPanels = async () => {
+		if (!storyAnalysis || !storyBreakdown || characterReferences.length === 0) {
+			return;
+		}
+
+		setIsRerunningPanels(true);
+		setError(null);
+		setGeneratedPanels([]); // Clear existing panels
+
+		try {
+			const panels: GeneratedPanel[] = [];
+
+			for (let i = 0; i < storyBreakdown.panels.length; i++) {
+				const panel = storyBreakdown.panels[i];
+				setCurrentStepText(
+					`Re-generating panel ${i + 1}/${storyBreakdown.panels.length}...`,
+				);
+
+				const response = await fetch("/api/generate-panel", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						panel,
+						characterReferences,
+						setting: storyAnalysis.setting,
+						style,
+					}),
+				});
+
+				if (!response.ok) {
+					throw new Error(`Failed to regenerate panel ${i + 1}`);
+				}
+
+				const { generatedPanel } = await response.json();
+				panels.push(generatedPanel);
+				setGeneratedPanels([...panels]);
+
+				if (i === 0) {
+					setOpenAccordions(new Set(["panels"]));
+				}
+			}
+
+			setCurrentStepText("Panels updated! 🎉");
+		} catch (error) {
+			console.error("Re-run panels error:", error);
+			setError(
+				error instanceof Error ? error.message : "Panel regeneration failed",
+			);
+		} finally {
+			setIsRerunningPanels(false);
+		}
+	};
+
 	return (
 		<div className={`min-h-screen py-4 px-4 style-${style}`}>
 			{/* Top navigation with logo */}
@@ -664,388 +1157,245 @@ export default function Home() {
 
 						<div className="accordion-manga space-y-4">
 							{/* Step 1: Story Analysis */}
-							<div className="accordion-item">
-								<h2 className="accordion-header" id={analysisHeadingId}>
-									<button
-										className="accordion-button"
-										type="button"
-										onClick={() => toggleAccordionSection("analysis")}
-									>
-										<span className="mr-2">{storyAnalysis ? "✅" : "⏳"}</span>
-										Step 1: Story Analysis
-										<span
-											className={`badge-manga-${storyAnalysis ? "success" : "warning"} ml-auto mr-3`}
-										>
-											{storyAnalysis ? "completed" : "pending"}
-										</span>
-									</button>
-								</h2>
-								<div
-									className={`accordion-body ${openAccordions.has("analysis") ? "" : "hidden"}`}
-								>
-									{storyAnalysis ? (
-										<div>
-											<h5 className="font-semibold mb-2">Characters:</h5>
-											<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-												{storyAnalysis.characters.map((char) => (
-													<div key={char.name} className="card-manga">
-														<div className="card-body">
-															<h6 className="card-title">{char.name}</h6>
-															<p className="card-text text-sm">
-																{char.physicalDescription}
-															</p>
-															<p className="card-text">
-																<em>{char.role}</em>
-															</p>
-														</div>
-													</div>
-												))}
-											</div>
-											<h5 className="font-semibold mt-3 mb-2">Setting:</h5>
-											<p>
-												<strong>Location:</strong>{" "}
-												{storyAnalysis.setting.location}
-											</p>
-											<p>
-												<strong>Time Period:</strong>{" "}
-												{storyAnalysis.setting.timePeriod}
-											</p>
-											<p>
-												<strong>Mood:</strong> {storyAnalysis.setting.mood}
-											</p>
+							<AccordionSection
+								id={analysisHeadingId}
+								title="Story Analysis"
+								stepNumber={1}
+								isCompleted={!!storyAnalysis}
+								isOpen={openAccordions.has("analysis")}
+								onToggle={() => toggleAccordionSection("analysis")}
+							>
+								{storyAnalysis ? (
+									<div>
+										<h5 className="font-semibold mb-2">Characters:</h5>
+										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+											{storyAnalysis.characters.map((char) => (
+												<CharacterCard
+													key={char.name}
+													character={char}
+													showImage={false}
+												/>
+											))}
 										</div>
-									) : (
-										<div>
-											<p className="text-manga-medium-gray">
-												Story analysis will appear here once generation begins.
-											</p>
-											{failedStep === "analysis" && (
-												<button
-													type="button"
-													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
-													onClick={() => retryFromStep("analysis")}
-													disabled={isGenerating}
-												>
-													Retry Story Analysis
-												</button>
-											)}
+										<h5 className="font-semibold mt-3 mb-2">Setting:</h5>
+										<p>
+											<strong>Location:</strong>{" "}
+											{storyAnalysis.setting.location}
+										</p>
+										<p>
+											<strong>Time Period:</strong>{" "}
+											{storyAnalysis.setting.timePeriod}
+										</p>
+										<p>
+											<strong>Mood:</strong> {storyAnalysis.setting.mood}
+										</p>
+										<div className="mt-3">
+											<RerunButton
+												onClick={rerunAnalysis}
+												isLoading={isRerunningAnalysis}
+												disabled={isGenerating}
+											/>
 										</div>
-									)}
-								</div>
-							</div>
+									</div>
+								) : (
+									<div>
+										<p className="text-manga-medium-gray">
+											Story analysis will appear here once generation begins.
+										</p>
+										{failedStep === "analysis" && (
+											<button
+												type="button"
+												className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+												onClick={() => retryFromStep("analysis")}
+												disabled={isGenerating}
+											>
+												Retry Story Analysis
+											</button>
+										)}
+									</div>
+								)}
+							</AccordionSection>
 
 							{/* Step 2: Character Designs */}
-							<div className="accordion-item">
-								<h2 className="accordion-header" id={charactersHeadingId}>
-									<button
-										className="accordion-button"
-										type="button"
-										onClick={() => toggleAccordionSection("characters")}
-									>
-										<span className="mr-2">
-											{characterReferences.length > 0 ? "✅" : "⏳"}
-										</span>
-										Step 2: Character Designs
-										<span
-											className={`badge-manga-${characterReferences.length > 0 ? "success" : "warning"} ml-auto mr-3`}
-										>
-											{characterReferences.length > 0 ? "completed" : "pending"}
-										</span>
-									</button>
-								</h2>
-								<div
-									className={`accordion-body ${openAccordions.has("characters") ? "" : "hidden"}`}
-								>
-									{characterReferences.length > 0 ? (
-										<div className="character-grid">
-											<div className="flex justify-between items-center mb-3">
-												<h5 className="font-semibold">Character Designs</h5>
-												<button
-													type="button"
-													className="btn-manga-primary"
-													onClick={downloadAllCharacters}
-													disabled={isDownloadingCharacters}
-												>
-													{isDownloadingCharacters ? (
-														<>
-															<span
-																className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
-																aria-hidden="true"
-															></span>
-															Creating zip...
-														</>
-													) : (
-														"Download All Characters"
-													)}
-												</button>
-											</div>
-											<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-												{characterReferences.map((char) => (
-													<div key={char.name} className="text-center">
-														<img
-															src={char.image}
-															alt={char.name}
-															className="w-full h-48 object-cover rounded mb-2 border-2 border-manga-black shadow-comic transition-transform hover:scale-105 cursor-pointer"
-															onClick={() =>
-																openImageModal(char.image, char.name)
-															}
-															onKeyDown={(e) => {
-																if (e.key === "Enter" || e.key === " ") {
-																	e.preventDefault();
-																	openImageModal(char.image, char.name);
-																}
-															}}
-														/>
-														<h6 className="font-semibold">{char.name}</h6>
-														<p className="text-sm text-manga-medium-gray mb-2">
-															{char.description}
-														</p>
-														<button
-															type="button"
-															className="btn-manga-outline text-sm"
-															onClick={() => downloadCharacter(char)}
-														>
-															Download Character
-														</button>
-													</div>
-												))}
-											</div>
+							<AccordionSection
+								id={charactersHeadingId}
+								title="Character Designs"
+								stepNumber={2}
+								isCompleted={characterReferences.length > 0}
+								isOpen={openAccordions.has("characters")}
+								onToggle={() => toggleAccordionSection("characters")}
+							>
+								{characterReferences.length > 0 ? (
+									<div className="character-grid">
+										<div className="flex justify-between items-center mb-3">
+											<h5 className="font-semibold">Character Designs</h5>
+											<DownloadButton
+												onClick={downloadAllCharacters}
+												isLoading={isDownloadingCharacters}
+												label="Download All Characters"
+												loadingText="Creating zip..."
+												variant="primary"
+											/>
 										</div>
-									) : (
-										<div>
-											<p className="text-manga-medium-gray">
-												Character design images will appear here after story
-												analysis.
-											</p>
-											{failedStep === "characters" && storyAnalysis && (
+										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+											{characterReferences.map((char) => (
+												<CharacterCard
+													key={char.name}
+													character={char}
+													showImage={true}
+													onImageClick={openImageModal}
+													onDownload={() => downloadCharacter(char)}
+												/>
+											))}
+										</div>
+										<div className="mt-3">
+											<RerunButton
+												onClick={rerunCharacterDesigns}
+												isLoading={isRerunningCharacters}
+												disabled={isGenerating || !storyAnalysis}
+											/>
+										</div>
+									</div>
+								) : (
+									<div>
+										<p className="text-manga-medium-gray">
+											Character design images will appear here after story
+											analysis.
+										</p>
+										{failedStep === "characters" && storyAnalysis && (
+											<button
+												type="button"
+												className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+												onClick={() => retryFromStep("characters")}
+												disabled={isGenerating}
+											>
+												Retry Character Generation
+											</button>
+										)}
+									</div>
+								)}
+							</AccordionSection>
+
+							{/* Step 3: Comic Layout Plan */}
+							<AccordionSection
+								id={layoutHeadingId}
+								title="Comic Layout Plan"
+								stepNumber={3}
+								isCompleted={!!storyBreakdown}
+								isOpen={openAccordions.has("layout")}
+								onToggle={() => toggleAccordionSection("layout")}
+							>
+								{storyBreakdown ? (
+									<div>
+										<h5 className="font-semibold mb-2">
+											Panel Sequence ({storyBreakdown.panels.length} panels)
+										</h5>
+										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+											{storyBreakdown.panels.map((panel) => (
+												<PanelCard
+													key={`panel-${panel.panelNumber}`}
+													panel={panel}
+													showImage={false}
+												/>
+											))}
+										</div>
+										<div className="mt-3">
+											<RerunButton
+												onClick={rerunLayoutPlan}
+												isLoading={isRerunningLayout}
+												disabled={isGenerating || !storyAnalysis}
+											/>
+										</div>
+									</div>
+								) : (
+									<div>
+										<p className="text-manga-medium-gray">
+											Comic layout plan will appear here after character designs
+											are complete.
+										</p>
+										{failedStep === "layout" &&
+											storyAnalysis &&
+											characterReferences.length > 0 && (
 												<button
 													type="button"
 													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
-													onClick={() => retryFromStep("characters")}
+													onClick={() => retryFromStep("layout")}
 													disabled={isGenerating}
 												>
-													Retry Character Generation
+													Retry Comic Layout
 												</button>
 											)}
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* Step 3: Comic Layout Plan */}
-							<div className="accordion-item">
-								<h2 className="accordion-header" id={layoutHeadingId}>
-									<button
-										className="accordion-button"
-										type="button"
-										onClick={() => toggleAccordionSection("layout")}
-									>
-										<span className="mr-2">{storyBreakdown ? "✅" : "⏳"}</span>
-										Step 3: Comic Layout Plan
-										<span
-											className={`badge-manga-${storyBreakdown ? "success" : "warning"} ml-auto mr-3`}
-										>
-											{storyBreakdown ? "completed" : "pending"}
-										</span>
-									</button>
-								</h2>
-								<div
-									className={`accordion-body ${openAccordions.has("layout") ? "" : "hidden"}`}
-								>
-									{storyBreakdown ? (
-										<div>
-											<h5 className="font-semibold mb-2">
-												Panel Sequence ({storyBreakdown.panels.length} panels)
-											</h5>
-											<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-												{storyBreakdown.panels.map((panel) => (
-													<div
-														key={`panel-${panel.panelNumber}`}
-														className="card-manga"
-													>
-														<div className="card-body">
-															<h6 className="card-title">
-																Panel {panel.panelNumber}
-															</h6>
-															<p className="card-text text-sm">
-																{panel.sceneDescription}
-															</p>
-															{panel.dialogue && (
-																<p className="card-text speech-bubble text-sm">
-																	"{panel.dialogue}"
-																</p>
-															)}
-															<div className="text-sm text-manga-medium-gray">
-																<div>
-																	<strong>Characters:</strong>{" "}
-																	{panel.characters.join(", ")}
-																</div>
-																<div>
-																	<strong>Camera:</strong> {panel.cameraAngle}
-																</div>
-																<div>
-																	<strong>Mood:</strong> {panel.visualMood}
-																</div>
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										</div>
-									) : (
-										<div>
-											<p className="text-manga-medium-gray">
-												Comic layout plan will appear here after character
-												designs are complete.
-											</p>
-											{failedStep === "layout" &&
-												storyAnalysis &&
-												characterReferences.length > 0 && (
-													<button
-														type="button"
-														className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
-														onClick={() => retryFromStep("layout")}
-														disabled={isGenerating}
-													>
-														Retry Comic Layout
-													</button>
-												)}
-										</div>
-									)}
-								</div>
-							</div>
+									</div>
+								)}
+							</AccordionSection>
 
 							{/* Step 4: Generated Panels */}
-							<div className="accordion-item">
-								<h2 className="accordion-header" id={panelsHeadingId}>
-									<button
-										className="accordion-button"
-										type="button"
-										onClick={() => toggleAccordionSection("panels")}
-									>
-										<span className="mr-2">
-											{(() => {
-												const expectedCount =
-													storyBreakdown?.panels.length || 0;
-												const currentCount = generatedPanels.length;
-												if (currentCount === 0) return "⏳";
-												if (currentCount === expectedCount && expectedCount > 0)
-													return "✅";
-												return "🔄";
-											})()}
-										</span>
-										Step 4: Generated Panels
-										<span
-											className={`badge-manga-${(() => {
-												const expectedCount =
-													storyBreakdown?.panels.length || 0;
-												const currentCount = generatedPanels.length;
-												if (currentCount === 0) return "warning";
-												if (currentCount === expectedCount && expectedCount > 0)
-													return "success";
-												return "info";
-											})()} ml-auto mr-3`}
-										>
-											{(() => {
-												const expectedCount =
-													storyBreakdown?.panels.length || 0;
-												const currentCount = generatedPanels.length;
-												if (currentCount === 0) return "pending";
-												if (currentCount === expectedCount && expectedCount > 0)
-													return "completed";
-												return "in-progress";
-											})()}
-										</span>
-									</button>
-								</h2>
-								<div
-									className={`accordion-body ${openAccordions.has("panels") ? "" : "hidden"}`}
-								>
-									{generatedPanels.length > 0 ? (
-										<div>
-											<div className="flex justify-between items-center mb-3">
-												<h5 className="font-semibold">Your Comic Panels</h5>
+							<AccordionSection
+								id={panelsHeadingId}
+								title="Generated Panels"
+								stepNumber={4}
+								isCompleted={getPanelStatus().isCompleted}
+								isInProgress={getPanelStatus().isInProgress}
+								isOpen={openAccordions.has("panels")}
+								onToggle={() => toggleAccordionSection("panels")}
+							>
+								{generatedPanels.length > 0 ? (
+									<div>
+										<div className="flex justify-between items-center mb-3">
+											<h5 className="font-semibold">Your Comic Panels</h5>
+											<DownloadButton
+												onClick={downloadAllPanels}
+												isLoading={isDownloadingPanels}
+												label="Download All Panels"
+												loadingText="Creating zip..."
+												variant="primary"
+											/>
+										</div>
+										<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+											{generatedPanels.map((panel) => (
+												<PanelCard
+													key={`generated-panel-${panel.panelNumber}`}
+													panel={panel}
+													showImage={true}
+													onImageClick={openImageModal}
+													onDownload={() => downloadPanel(panel)}
+												/>
+											))}
+										</div>
+										<div className="mt-3">
+											<RerunButton
+												onClick={rerunPanels}
+												isLoading={isRerunningPanels}
+												disabled={
+													isGenerating ||
+													!storyAnalysis ||
+													!storyBreakdown ||
+													characterReferences.length === 0
+												}
+											/>
+										</div>
+									</div>
+								) : (
+									<div>
+										<p className="text-manga-medium-gray">
+											Your finished comic panels will appear here!
+										</p>
+										{failedStep === "panels" &&
+											storyAnalysis &&
+											characterReferences.length > 0 &&
+											storyBreakdown && (
 												<button
 													type="button"
-													className="btn-manga-primary"
-													onClick={downloadAllPanels}
-													disabled={isDownloadingPanels}
+													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
+													onClick={() => retryFromStep("panels")}
+													disabled={isGenerating}
 												>
-													{isDownloadingPanels ? (
-														<>
-															<span
-																className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
-																aria-hidden="true"
-															></span>
-															Creating zip...
-														</>
-													) : (
-														"Download All Panels"
-													)}
+													Retry Panel Generation
 												</button>
-											</div>
-											<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-												{generatedPanels.map((panel) => (
-													<div
-														key={`generated-panel-${panel.panelNumber}`}
-														className="text-center"
-													>
-														<img
-															src={panel.image}
-															alt={`Comic Panel ${panel.panelNumber}`}
-															className="w-full rounded mb-2 comic-panel cursor-pointer transition-transform hover:scale-[1.02]"
-															onClick={() =>
-																openImageModal(
-																	panel.image,
-																	`Comic Panel ${panel.panelNumber}`,
-																)
-															}
-															onKeyDown={(e) => {
-																if (e.key === "Enter" || e.key === " ") {
-																	e.preventDefault();
-																	openImageModal(
-																		panel.image,
-																		`Comic Panel ${panel.panelNumber}`,
-																	);
-																}
-															}}
-														/>
-														<h6 className="font-semibold">
-															Panel {panel.panelNumber}
-														</h6>
-														<button
-															type="button"
-															className="btn-manga-outline text-sm"
-															onClick={() => downloadPanel(panel)}
-														>
-															Download Panel
-														</button>
-													</div>
-												))}
-											</div>
-										</div>
-									) : (
-										<div>
-											<p className="text-manga-medium-gray">
-												Your finished comic panels will appear here!
-											</p>
-											{failedStep === "panels" &&
-												storyAnalysis &&
-												characterReferences.length > 0 &&
-												storyBreakdown && (
-													<button
-														type="button"
-														className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
-														onClick={() => retryFromStep("panels")}
-														disabled={isGenerating}
-													>
-														Retry Panel Generation
-													</button>
-												)}
-										</div>
-									)}
-								</div>
-							</div>
+											)}
+									</div>
+								)}
+							</AccordionSection>
 						</div>
 					</div>
 				</div>
