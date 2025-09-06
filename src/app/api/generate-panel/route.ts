@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
 		const stylePrefix =
 			style === "manga"
-				? "manga visual style (black and white with screentones), English text"
+				? "Japanese manga visual style (black and white with screentones), but with English text"
 				: "American comic book style, full color, clean line art";
 
 		// Process single panel
