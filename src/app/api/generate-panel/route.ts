@@ -131,7 +131,8 @@ Generate a single comic panel image with proper framing and composition.
 			"Calling Gemini API for panel generation",
 		);
 
-		try {
+		// Helper function to attempt generation with retry logic
+		const attemptGeneration = async (attemptNumber: number) => {
 			const result = await genAI.models.generateContent({
 				model: model,
 				contents: inputParts,
@@ -140,6 +141,7 @@ Generate a single comic panel image with proper framing and composition.
 			panelLogger.debug(
 				{
 					panel_number: panel.panelNumber,
+					attempt: attemptNumber,
 				},
 				"Received response from Gemini API",
 			);
@@ -157,6 +159,7 @@ Generate a single comic panel image with proper framing and composition.
 							panel_number: panel.panelNumber,
 							text_response: part.text,
 							text_length: part.text.length,
+							attempt: attemptNumber,
 						},
 						"Received text response from model (full content)",
 					);
@@ -172,6 +175,7 @@ Generate a single comic panel image with proper framing and composition.
 								? Math.round((imageData.length * 0.75) / 1024)
 								: 0,
 							duration_ms: Date.now() - startTime,
+							attempt: attemptNumber,
 						},
 						"Successfully generated panel",
 					);
@@ -181,6 +185,7 @@ Generate a single comic panel image with proper framing and composition.
 						image_size_kb: imageData
 							? Math.round((imageData.length * 0.75) / 1024)
 							: 0,
+						attempt: attemptNumber,
 					});
 
 					return NextResponse.json({
@@ -194,6 +199,50 @@ Generate a single comic panel image with proper framing and composition.
 			}
 
 			throw new Error("No image data received in response parts");
+		};
+
+		try {
+			// Try generation with single retry for "No content parts received" error
+			try {
+				return await attemptGeneration(1);
+			} catch (error) {
+				if (
+					error instanceof Error &&
+					error.message === "No content parts received"
+				) {
+					panelLogger.warn(
+						{
+							panel_number: panel.panelNumber,
+							error_message: error.message,
+							duration_ms: Date.now() - startTime,
+						},
+						"First attempt failed with 'No content parts received', retrying once",
+					);
+
+					// Wait 1.5 seconds before retry
+					await new Promise((resolve) => setTimeout(resolve, 1500));
+
+					try {
+						return await attemptGeneration(2);
+					} catch (retryError) {
+						panelLogger.error(
+							{
+								panel_number: panel.panelNumber,
+								original_error: error.message,
+								retry_error:
+									retryError instanceof Error
+										? retryError.message
+										: "Unknown error",
+								duration_ms: Date.now() - startTime,
+							},
+							"Retry also failed, giving up",
+						);
+						throw retryError;
+					}
+				}
+				// Re-throw error for the outer catch block to handle
+				throw error;
+			}
 		} catch (error) {
 			logError(panelLogger, error, "panel generation", {
 				panel_number: panel.panelNumber,
