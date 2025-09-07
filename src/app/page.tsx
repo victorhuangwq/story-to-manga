@@ -1698,7 +1698,7 @@ export default function Home() {
 												height: '1200px',
 												backgroundColor: '#ffffff',
 												padding: '32px',
-												fontFamily: 'system-ui, sans-serif'
+												fontFamily: style === 'manga' ? '"M PLUS 1", "Sawarabi Gothic", sans-serif' : '"Comfortaa", sans-serif'
 											}}
 										>
 											{/* Header with title and branding */}

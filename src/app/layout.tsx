@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "../styles/manga-components.css";
+import "../styles/manga-theme.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

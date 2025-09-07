@@ -29,9 +29,9 @@
   --comic-radius: 8px;
   
   /* Typography - American Comic Style */
-  --font-display-comic: 'Bangers', cursive;
-  --font-body-comic: 'Comfortaa', sans-serif;
-  --font-handwriting-comic: 'Permanent Marker', cursive;
+  --font-display-comic: 'M PLUS 1', 'Sawarabi Gothic', sans-serif;
+  --font-body-comic: 'M PLUS 1', 'Sawarabi Gothic', sans-serif;
+  --font-handwriting-comic: 'M PLUS 1', 'Sawarabi Gothic', sans-serif;
   
   /* Typography - Manga Style */
   --font-display-manga: 'Sawarabi Gothic', 'M PLUS 1', sans-serif;
