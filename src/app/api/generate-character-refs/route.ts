@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 			);
 			const stylePrefix =
 				style === "manga"
-					? "Japanese manga style, black and white, detailed character design with clean line art and screentones"
+					? "Japanese manga style, black and white, detailed character design with clean line art and screentones, English text only"
 					: "American comic book style, colorful superhero art with bold colors and clean line art";
 
 			const prompt = `
