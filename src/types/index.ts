@@ -41,6 +41,7 @@ export interface Setting {
 }
 
 export interface StoryAnalysis {
+	title: string;
 	characters: Character[];
 	setting: Setting;
 }

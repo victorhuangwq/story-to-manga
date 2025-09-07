@@ -98,13 +98,15 @@ Story: "${story}"
 Style: ${style}
 
 Please provide:
-1. A list of main characters (1-4 maximum, choose based on story complexity) with:
+1. A title for this story (create a catchy, appropriate title if one isn't explicitly mentioned)
+
+2. A list of main characters (1-4 maximum, choose based on story complexity) with:
    - Name
    - Physical description (age, build, hair, clothing, distinctive features)
    - Personality traits
    - Role in the story
 
-2. Setting description (time period, location, mood)
+3. Setting description (time period, location, mood)
 `;
 
 		storyAnalysisLogger.info(
@@ -123,6 +125,9 @@ Please provide:
 				responseSchema: {
 					type: Type.OBJECT,
 					properties: {
+						title: {
+							type: Type.STRING,
+						},
 						characters: {
 							type: Type.ARRAY,
 							items: {
@@ -165,7 +170,7 @@ Please provide:
 							propertyOrdering: ["timePeriod", "location", "mood"],
 						},
 					},
-					propertyOrdering: ["characters", "setting"],
+					propertyOrdering: ["title", "characters", "setting"],
 				},
 			},
 		});

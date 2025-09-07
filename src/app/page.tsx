@@ -1710,7 +1710,7 @@ export default function Home() {
 													marginBottom: '8px',
 													margin: '0 0 8px 0'
 												}}>
-													{style === "manga" ? "Manga" : "Comic"} Story
+													{storyAnalysis?.title || `${style === "manga" ? "Manga" : "Comic"} Story`}
 												</h1>
 												<div style={{ 
 													fontSize: '14px', 
