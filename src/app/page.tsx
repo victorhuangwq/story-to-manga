@@ -1,8 +1,5 @@
 "use client";
 
-import html2canvas from "html2canvas";
-import JSZip from "jszip";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
 import ImageUpload from "@/components/ImageUpload";
 import {
 	clearAllData,
@@ -19,6 +16,9 @@ import type {
 	UploadedCharacterReference,
 	UploadedSettingReference,
 } from "@/types";
+import html2canvas from "html2canvas";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -418,16 +418,21 @@ function ShareableComicLayout({
 		storyAnalysis?.title || `${style === "manga" ? "Manga" : "Comic"} Story`;
 
 	if (isPreview) {
+		const panelsToShow = generatedPanels.slice(0, 4);
+		const charactersToShow = characterReferences.slice(0, 3);
+		const remainingPanels = Math.max(0, generatedPanels.length - 4);
+		const remainingCharacters = Math.max(0, characterReferences.length - 3);
+
 		// Simplified preview version
 		return (
-			<div className="max-w-xs mx-auto bg-white p-2 rounded shadow-sm">
+			<div className="max-w-sm mx-auto bg-white p-3 rounded shadow-sm">
 				<div className="aspect-square bg-gray-100 rounded flex flex-col">
-					<div className="text-center p-2 border-b">
-						<div className="text-xs font-semibold truncate">{title}</div>
+					<div className="text-center p-3 border-b">
+						<div className="text-sm font-semibold truncate">{title}</div>
 					</div>
 					<div className="flex-1 flex">
-						<div className="flex-1 grid grid-cols-2 gap-1 p-2">
-							{generatedPanels.slice(0, 4).map((panel) => (
+						<div className="flex-1 grid grid-cols-2 gap-2 p-3 relative">
+							{panelsToShow.map((panel) => (
 								<div
 									key={`preview-panel-${panel.panelNumber}`}
 									className="bg-gray-200 rounded aspect-square"
@@ -439,9 +444,14 @@ function ShareableComicLayout({
 									/>
 								</div>
 							))}
+							{remainingPanels > 0 && (
+								<div className="absolute bottom-2 right-2 text-[12px] px-2 py-1 rounded shadow-lg border" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#000000'}}>
+									+{remainingPanels} more
+								</div>
+							)}
 						</div>
-						<div className="w-12 p-1">
-							{characterReferences.slice(0, 3).map((char) => (
+						<div className="w-16 p-2 relative">
+							{charactersToShow.map((char) => (
 								<div
 									key={`preview-char-${char.name}`}
 									className="bg-gray-200 rounded mb-1 aspect-square"
@@ -453,6 +463,11 @@ function ShareableComicLayout({
 									/>
 								</div>
 							))}
+							{remainingCharacters > 0 && (
+								<div className="absolute bottom-2 right-2 text-[12px] px-2 py-1 rounded shadow-lg border" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#000000'}}>
+									+{remainingCharacters}
+								</div>
+							)}
 						</div>
 					</div>
 				</div>
