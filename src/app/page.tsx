@@ -2163,28 +2163,64 @@ export default function Home() {
 								onToggle={() => toggleAccordionSection("panels")}
 								showStatus={isGenerating || generatedPanels.length > 0}
 							>
-								{generatedPanels.length > 0 ? (
+								{storyBreakdown ? (
 									<div>
 										<div className="flex justify-between items-center mb-3">
 											<h5 className="font-semibold">Your Comic Panels</h5>
-											<DownloadButton
-												onClick={downloadAllPanels}
-												isLoading={isDownloadingPanels}
-												label="Download All Panels"
-												loadingText="Creating zip..."
-												variant="outline"
-											/>
+											{generatedPanels.length > 0 && (
+												<DownloadButton
+													onClick={downloadAllPanels}
+													isLoading={isDownloadingPanels}
+													label="Download All Panels"
+													loadingText="Creating zip..."
+													variant="outline"
+												/>
+											)}
 										</div>
 										<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-											{generatedPanels.map((panel) => (
-												<PanelCard
-													key={`generated-panel-${panel.panelNumber}`}
-													panel={panel}
-													showImage={true}
-													onImageClick={openImageModal}
-													onDownload={() => downloadPanel(panel)}
-												/>
-											))}
+											{storyBreakdown.panels.map((panel, index) => {
+												const generatedPanel = generatedPanels.find(p => p.panelNumber === panel.panelNumber);
+												const isCurrentlyGenerating = isGenerating && 
+													currentStepText.includes("panel") && 
+													generatedPanels.length === index;
+
+												if (generatedPanel) {
+													// Show completed panel
+													return (
+														<PanelCard
+															key={`generated-panel-${panel.panelNumber}`}
+															panel={generatedPanel}
+															showImage={true}
+															onImageClick={openImageModal}
+															onDownload={() => downloadPanel(generatedPanel)}
+														/>
+													);
+												} else {
+													// Show placeholder for pending/generating panel
+													return (
+														<div 
+															key={`placeholder-panel-${panel.panelNumber}`} 
+															className={`card-manga ${isCurrentlyGenerating ? 'animate-pulse' : ''} border-dashed border-2 border-manga-medium-gray/50 bg-manga-medium-gray/10`}
+														>
+															<div className="card-body text-center py-8">
+																{isCurrentlyGenerating ? (
+																	<>
+																		<div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-manga-black mb-2"></div>
+																		<h6 className="card-title text-manga-medium-gray">Generating Panel {panel.panelNumber}...</h6>
+																		<p className="card-text text-sm text-manga-medium-gray/80">{panel.sceneDescription}</p>
+																	</>
+																) : (
+																	<>
+																		<h6 className="card-title text-manga-medium-gray">Panel {panel.panelNumber}</h6>
+																		<p className="card-text text-sm text-manga-medium-gray/80">Waiting to generate...</p>
+																		<p className="card-text text-xs text-manga-medium-gray/60 mt-2">{panel.sceneDescription}</p>
+																	</>
+																)}
+															</div>
+														</div>
+													);
+												}
+											})}
 										</div>
 										<div className="mt-3">
 											<RerunButton
@@ -2202,7 +2238,7 @@ export default function Home() {
 								) : (
 									<div>
 										<p className="text-manga-medium-gray">
-											Your finished comic panels will appear here!
+											Your finished comic panels will appear here after the layout is planned!
 										</p>
 										{failedStep === "panels" &&
 											storyAnalysis &&
