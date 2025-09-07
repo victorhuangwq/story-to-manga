@@ -1,6 +1,6 @@
 # Story to Manga Generator
 
-Transform your written stories into visual manga or comic book pages using Nano Banana!
+Transform your written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API!
 
 *Built for the [Nano Banana Hackathon](https://www.kaggle.com/competitions/banana)* 🍌
 
@@ -9,13 +9,17 @@ Transform your written stories into visual manga or comic book pages using Nano 
 - **Multi-Style Generation**: Choose between Japanese manga or American comic book styles
 - **Character Consistency**: AI generates character reference sheets and maintains visual consistency across panels
 - **Progressive Display**: See character designs first, then comic pages as they're generated
-- **Download Support**: Download individual pages or all pages at once
+- **State Persistence**: Your work is automatically saved - refresh without losing progress
+- **Create Shareable Images**: Generate social media-ready composite images combining panels and character designs
+- **Download Support**: Download individual panels or complete comic pages
 - **Smart Story Processing**: Automatically analyzes stories, identifies characters, and creates optimal panel layouts
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
-- **AI Model**: [Nano Banana (Gemini 2.5 Flash Image)](https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-image-preview)
+- **Frontend**: Next.js 15 with TypeScript and Tailwind CSS v4
+- **AI Model**: [Gemini 2.5 Flash Image](https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-image-preview)
+- **Storage**: Hybrid localStorage (text) + IndexedDB (images) for state persistence
+- **Image Export**: HTML2Canvas for social media composite generation
 - **Deployment**: AWS Amplify Gen 2
 
 ## Setup Instructions
@@ -55,18 +59,23 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ## How It Works
 
-1. **Story Analysis**: AI analyzes your story to identify main characters and setting
-2. **Character Design**: Generates detailed character reference images for consistency
-3. **Story Breakdown**: Intelligently chunks your story into comic panels with optimal layouts
-4. **Page Generation**: Creates complete comic pages using character references for visual consistency
+1. **Story Analysis**: Gemini analyzes your narrative to extract characters, settings, themes, and emotional arcs
+2. **Character Design**: Generates consistent character reference sheets with detailed visual descriptions
+3. **Comic Layout Plan**: Intelligently breaks your story into sequential panels with scene descriptions and dialogue
+4. **Panel Generation**: Creates manga/comic panels while maintaining character consistency using reference sheets
+5. **Create Shareable Image**: Combine panels and character designs into a 1200x1200px social media-ready image
 
 ## Usage
 
 1. Choose your preferred style (Manga or Comic)
 2. Paste your story (max 500 words)
 3. Click "Generate Comic"
-4. Watch as character designs appear first, then comic pages
-5. Download individual pages or all pages at once
+4. Watch as the AI progressively:
+   - Analyzes your story structure
+   - Creates character reference sheets
+   - Plans the comic layout
+   - Generates individual panels
+5. Download individual panels or create a shareable composite image
 
 ## Deployment to AWS Amplify
 
@@ -103,7 +112,7 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 - Check browser console for errors
 - Ensure stable internet connection
 - Try refreshing the page
-
+  
 ## Contributing
 
 Feel free to submit issues and enhancement requests!
