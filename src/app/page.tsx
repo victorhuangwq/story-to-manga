@@ -1,9 +1,11 @@
 "use client";
 
-import JSZip from "jszip";
-import html2canvas from "html2canvas";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { saveState, loadState, clearAllData, getStorageInfo } from "@/lib/storage";
+import {
+	clearAllData,
+	getStorageInfo,
+	loadState,
+	saveState,
+} from "@/lib/storage";
 import type {
 	CharacterReference,
 	ComicStyle,
@@ -11,6 +13,9 @@ import type {
 	StoryAnalysis,
 	StoryBreakdown,
 } from "@/types";
+import html2canvas from "html2canvas";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -345,7 +350,7 @@ export default function Home() {
 	const layoutHeadingId = useId();
 	const panelsHeadingId = useId();
 	const compositorHeadingId = useId();
-	
+
 	// Ref for the compositor canvas
 	const compositorRef = useRef<HTMLDivElement>(null);
 
@@ -375,6 +380,8 @@ export default function Home() {
 	// Modal state
 	const [modalImage, setModalImage] = useState<string | null>(null);
 	const [modalAlt, setModalAlt] = useState<string>("");
+	const [showConfirmClearModal, setShowConfirmClearModal] =
+		useState<boolean>(false);
 
 	// Download state
 	const [isDownloadingCharacters, setIsDownloadingCharacters] = useState(false);
@@ -422,7 +429,9 @@ export default function Home() {
 	};
 
 	const expandAllAccordions = () => {
-		setOpenAccordions(new Set(["analysis", "characters", "layout", "panels", "compositor"]));
+		setOpenAccordions(
+			new Set(["analysis", "characters", "layout", "panels", "compositor"]),
+		);
 	};
 
 	const collapseAllAccordions = () => {
@@ -677,19 +686,28 @@ export default function Home() {
 		setModalAlt("");
 	}, []);
 
-	// Handle escape key for modal
+	// Cancel clearing data
+	const cancelClearData = useCallback(() => {
+		setShowConfirmClearModal(false);
+	}, []);
+
+	// Handle escape key for modals
 	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
-			if (e.key === "Escape" && modalImage) {
-				closeImageModal();
+			if (e.key === "Escape") {
+				if (showConfirmClearModal) {
+					cancelClearData();
+				} else if (modalImage) {
+					closeImageModal();
+				}
 			}
 		};
 
-		if (modalImage) {
+		if (modalImage || showConfirmClearModal) {
 			document.addEventListener("keydown", handleEscape);
 			return () => document.removeEventListener("keydown", handleEscape);
 		}
-	}, [modalImage, closeImageModal]);
+	}, [modalImage, showConfirmClearModal, closeImageModal, cancelClearData]);
 
 	const clearResults = () => {
 		setStoryAnalysis(null);
@@ -1029,32 +1047,31 @@ export default function Home() {
 	// Comic compositor functionality
 	const generateComposite = async () => {
 		if (!compositorRef.current || generatedPanels.length === 0) return;
-		
+
 		setIsGeneratingComposite(true);
 		try {
 			const canvas = await html2canvas(compositorRef.current, {
-				backgroundColor: '#ffffff',
+				backgroundColor: "#ffffff",
 				scale: 2, // Higher quality
 				useCORS: true,
 				allowTaint: false,
 				logging: false,
 			});
-			
+
 			// Convert to blob and download
 			canvas.toBlob((blob) => {
 				if (blob) {
 					const url = URL.createObjectURL(blob);
-					const link = document.createElement('a');
+					const link = document.createElement("a");
 					link.href = url;
 					link.download = `comic-page-${style}-${Date.now()}.png`;
 					link.click();
 					URL.revokeObjectURL(url);
 				}
-			}, 'image/png');
-			
+			}, "image/png");
 		} catch (error) {
-			console.error('Failed to generate composite:', error);
-			setError('Failed to generate composite image');
+			console.error("Failed to generate composite:", error);
+			setError("Failed to generate composite image");
 		} finally {
 			setIsGeneratingComposite(false);
 		}
@@ -1072,20 +1089,25 @@ export default function Home() {
 					setCharacterReferences(savedState.characterReferences);
 					setStoryBreakdown(savedState.storyBreakdown);
 					setGeneratedPanels(savedState.generatedPanels);
-					
+
 					// Auto-expand sections with content
 					const sectionsToExpand: string[] = [];
 					if (savedState.storyAnalysis) sectionsToExpand.push("analysis");
-					if (savedState.characterReferences.length > 0) sectionsToExpand.push("characters");
+					if (savedState.characterReferences.length > 0)
+						sectionsToExpand.push("characters");
 					if (savedState.storyBreakdown) sectionsToExpand.push("layout");
-					if (savedState.generatedPanels.length > 0) sectionsToExpand.push("panels");
-					if (savedState.generatedPanels.length > 0 && savedState.characterReferences.length > 0) {
+					if (savedState.generatedPanels.length > 0)
+						sectionsToExpand.push("panels");
+					if (
+						savedState.generatedPanels.length > 0 &&
+						savedState.characterReferences.length > 0
+					) {
 						sectionsToExpand.push("compositor");
 					}
 					setOpenAccordions(new Set(sectionsToExpand));
 				}
 			} catch (error) {
-				console.error('Failed to load saved state:', error);
+				console.error("Failed to load saved state:", error);
 			} finally {
 				setIsLoadingState(false);
 			}
@@ -1097,7 +1119,7 @@ export default function Home() {
 	// Save state whenever important data changes
 	useEffect(() => {
 		if (isLoadingState) return; // Don't save while still loading
-		
+
 		const saveCurrentState = async () => {
 			try {
 				setIsSavingState(true);
@@ -1107,31 +1129,47 @@ export default function Home() {
 					storyAnalysis,
 					storyBreakdown,
 					characterReferences,
-					generatedPanels
+					generatedPanels,
 				);
 			} catch (error) {
-				console.error('Failed to save state:', error);
+				console.error("Failed to save state:", error);
 			} finally {
 				setIsSavingState(false);
 			}
 		};
 
 		// Only save if we have some meaningful content
-		if (story.trim() || storyAnalysis || characterReferences.length > 0 || generatedPanels.length > 0) {
+		if (
+			story.trim() ||
+			storyAnalysis ||
+			characterReferences.length > 0 ||
+			generatedPanels.length > 0
+		) {
 			saveCurrentState();
 		}
-	}, [story, style, storyAnalysis, storyBreakdown, characterReferences, generatedPanels, isLoadingState]);
+	}, [
+		story,
+		style,
+		storyAnalysis,
+		storyBreakdown,
+		characterReferences,
+		generatedPanels,
+		isLoadingState,
+	]);
 
-	// Clear all data function
-	const handleClearAllData = async () => {
-		if (!confirm('Are you sure you want to clear all saved data? This will delete your story, characters, and panels permanently.')) {
-			return;
-		}
-		
+	// Show confirmation modal for clearing data
+	const handleClearAllData = () => {
+		setShowConfirmClearModal(true);
+	};
+
+	// Actually clear all data after confirmation
+	const confirmClearAllData = async () => {
+		setShowConfirmClearModal(false);
+
 		try {
 			await clearAllData();
-			setStory('');
-			setStyle('manga');
+			setStory("");
+			setStyle("manga");
 			setStoryAnalysis(null);
 			setCharacterReferences([]);
 			setStoryBreakdown(null);
@@ -1140,13 +1178,18 @@ export default function Home() {
 			setFailedStep(null);
 			setOpenAccordions(new Set());
 		} catch (error) {
-			console.error('Failed to clear data:', error);
-			setError('Failed to clear saved data');
+			console.error("Failed to clear data:", error);
+			setError("Failed to clear saved data");
 		}
 	};
 
-	const hasCompositeContent = generatedPanels.length > 0 && characterReferences.length > 0;
-	const hasAnyContent = story.trim() || storyAnalysis || characterReferences.length > 0 || generatedPanels.length > 0;
+	const hasCompositeContent =
+		generatedPanels.length > 0 && characterReferences.length > 0;
+	const hasAnyContent =
+		story.trim() ||
+		storyAnalysis ||
+		characterReferences.length > 0 ||
+		generatedPanels.length > 0;
 	const storageInfo = getStorageInfo();
 
 	// Show loading screen while initializing
@@ -1155,7 +1198,9 @@ export default function Home() {
 			<div className="min-h-screen flex items-center justify-center bg-manga-off-white">
 				<div className="text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-manga-black mb-4"></div>
-					<p className="text-manga-medium-gray">Loading your saved content...</p>
+					<p className="text-manga-medium-gray">
+						Loading your saved content...
+					</p>
 				</div>
 			</div>
 		);
@@ -1354,7 +1399,7 @@ export default function Home() {
 								className="btn-manga-outline w-full text-xs"
 								onClick={handleClearAllData}
 								disabled={isGenerating}
-								style={{ fontSize: '12px', padding: '8px 12px' }}
+								style={{ fontSize: "12px", padding: "8px 12px" }}
 							>
 								🗑️ Clear All Saved Data
 							</button>
@@ -1363,7 +1408,10 @@ export default function Home() {
 						{/* Storage Info */}
 						{storageInfo.hasData && (
 							<div className="text-xs text-manga-medium-gray mt-2 text-center">
-								💾 Data saved{storageInfo.timestamp ? ` ${new Date(storageInfo.timestamp).toLocaleTimeString()}` : ''}
+								💾 Data saved
+								{storageInfo.timestamp
+									? ` ${new Date(storageInfo.timestamp).toLocaleTimeString()}`
+									: ""}
 								{isSavingState && <span className="ml-1">💾 Saving...</span>}
 							</div>
 						)}
@@ -1677,7 +1725,9 @@ export default function Home() {
 								{hasCompositeContent ? (
 									<div>
 										<div className="flex justify-between items-center mb-3">
-											<h5 className="font-semibold">Create Shareable Comic Page</h5>
+											<h5 className="font-semibold">
+												Create Shareable Comic Page
+											</h5>
 											<DownloadButton
 												onClick={generateComposite}
 												isLoading={isGeneratingComposite}
@@ -1686,19 +1736,22 @@ export default function Home() {
 												variant="outline"
 											/>
 										</div>
-										
+
 										{/* Hidden compositor layout for html2canvas */}
 										<div
 											ref={compositorRef}
 											style={{
-												position: 'fixed',
-												left: '-9999px',
-												top: '0',
-												width: '1200px',
-												height: '1200px',
-												backgroundColor: '#ffffff',
-												padding: '32px',
-												fontFamily: style === 'manga' ? '"M PLUS 1", "Sawarabi Gothic", sans-serif' : '"Comfortaa", sans-serif'
+												position: "fixed",
+												left: "-9999px",
+												top: "0",
+												width: "1200px",
+												height: "1200px",
+												backgroundColor: "#ffffff",
+												padding: "32px",
+												fontFamily:
+													style === "manga"
+														? '"M PLUS 1", "Sawarabi Gothic", sans-serif'
+														: '"Comfortaa", sans-serif',
 											}}
 										>
 											{/* Header with title and branding */}
@@ -1712,51 +1765,67 @@ export default function Home() {
 												}}>
 													{storyAnalysis?.title || `${style === "manga" ? "Manga" : "Comic"} Story`}
 												</h1>
-												<div style={{ 
-													fontSize: '14px', 
-													color: '#6b7280',
-													margin: '0'
-												}}>
-													Generated with Story to {style === "manga" ? "Manga" : "Comic"} Generator
+												<div
+													style={{
+														fontSize: "14px",
+														color: "#6b7280",
+														margin: "0",
+													}}
+												>
+													Generated with Story to{" "}
+													{style === "manga" ? "Manga" : "Comic"} Generator
 												</div>
 											</div>
 
 											{/* Main content area */}
-											<div style={{ display: 'flex', height: '970px' }}>
+											<div style={{ display: "flex", height: "970px" }}>
 												{/* Panels section - 75% width */}
-												<div style={{ width: '75%', paddingRight: '16px' }}>
-													<div style={{ 
-														display: 'grid', 
-														gap: '12px', 
-														height: '100%',
-														gridTemplateColumns: generatedPanels.length <= 2 ? '1fr' :
-															generatedPanels.length <= 4 ? '1fr 1fr' :
-															generatedPanels.length <= 6 ? '1fr 1fr' :
-															'1fr 1fr 1fr',
-														gridTemplateRows: generatedPanels.length <= 2 ? '1fr 1fr' :
-															generatedPanels.length <= 4 ? '1fr 1fr' :
-															generatedPanels.length <= 6 ? '1fr 1fr 1fr' :
-															'1fr 1fr'
-													}}>
+												<div style={{ width: "75%", paddingRight: "16px" }}>
+													<div
+														style={{
+															display: "grid",
+															gap: "12px",
+															height: "100%",
+															gridTemplateColumns:
+																generatedPanels.length <= 2
+																	? "1fr"
+																	: generatedPanels.length <= 4
+																		? "1fr 1fr"
+																		: generatedPanels.length <= 6
+																			? "1fr 1fr"
+																			: "1fr 1fr 1fr",
+															gridTemplateRows:
+																generatedPanels.length <= 2
+																	? "1fr 1fr"
+																	: generatedPanels.length <= 4
+																		? "1fr 1fr"
+																		: generatedPanels.length <= 6
+																			? "1fr 1fr 1fr"
+																			: "1fr 1fr",
+														}}
+													>
 														{generatedPanels.map((panel) => (
-															<div key={`composite-panel-${panel.panelNumber}`} style={{ 
-																position: 'relative',
-																display: 'flex',
-																alignItems: 'center',
-																justifyContent: 'center',
-																backgroundColor: '#f9fafb'
-															}}>
+															<div
+																key={`composite-panel-${panel.panelNumber}`}
+																style={{
+																	position: "relative",
+																	display: "flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	backgroundColor: "#f9fafb",
+																}}
+															>
 																<img
 																	src={panel.image}
 																	alt={`Panel ${panel.panelNumber}`}
 																	style={{
-																		maxWidth: '100%',
-																		maxHeight: '100%',
-																		width: 'auto',
-																		height: 'auto',
-																		objectFit: 'contain',
-																		borderRadius: '8px',
-																		border: '2px solid #d1d5db'
+																		maxWidth: "100%",
+																		maxHeight: "100%",
+																		width: "auto",
+																		height: "auto",
+																		objectFit: "contain",
+																		borderRadius: "8px",
+																		border: "2px solid #d1d5db",
 																	}}
 																	crossOrigin="anonymous"
 																/>
@@ -1766,56 +1835,73 @@ export default function Home() {
 												</div>
 
 												{/* Character showcase - 25% width */}
-												<div style={{ 
-													width: '25%', 
-													paddingLeft: '16px', 
-													borderLeft: '2px solid #e5e7eb' 
-												}}>
-													<h3 style={{ 
-														fontSize: '18px', 
-														fontWeight: '600', 
-														color: '#1f2937', 
-														marginBottom: '16px', 
-														textAlign: 'center',
-														margin: '0 0 16px 0'
-													}}>
+												<div
+													style={{
+														width: "25%",
+														paddingLeft: "16px",
+														borderLeft: "2px solid #e5e7eb",
+													}}
+												>
+													<h3
+														style={{
+															fontSize: "18px",
+															fontWeight: "600",
+															color: "#1f2937",
+															marginBottom: "16px",
+															textAlign: "center",
+															margin: "0 0 16px 0",
+														}}
+													>
 														Characters
 													</h3>
-													<div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+													<div
+														style={{
+															display: "flex",
+															flexDirection: "column",
+															gap: "16px",
+														}}
+													>
 														{characterReferences.slice(0, 3).map((char) => (
-															<div key={`composite-char-${char.name}`} style={{ textAlign: 'center' }}>
-																<div style={{
-																	width: '200px',
-																	height: '200px',
-																	display: 'flex',
-																	alignItems: 'center',
-																	justifyContent: 'center',
-																	backgroundColor: '#f9fafb',
-																	borderRadius: '6px',
-																	border: '1px solid #d1d5db',
-																	marginBottom: '8px',
-																	margin: '0 auto 8px auto'
-																}}>
+															<div
+																key={`composite-char-${char.name}`}
+																style={{ textAlign: "center" }}
+															>
+																<div
+																	style={{
+																		width: "200px",
+																		height: "200px",
+																		display: "flex",
+																		alignItems: "center",
+																		justifyContent: "center",
+																		backgroundColor: "#f9fafb",
+																		borderRadius: "6px",
+																		border: "1px solid #d1d5db",
+																		marginBottom: "8px",
+																		margin: "0 auto 8px auto",
+																	}}
+																>
 																	<img
 																		src={char.image}
 																		alt={char.name}
 																		style={{
-																			maxWidth: '100%',
-																			maxHeight: '100%',
-																			width: 'auto',
-																			height: 'auto',
-																			objectFit: 'contain',
-																			borderRadius: '4px'
+																			maxWidth: "100%",
+																			maxHeight: "100%",
+																			width: "auto",
+																			height: "auto",
+																			objectFit: "contain",
+																			borderRadius: "4px",
 																		}}
 																		crossOrigin="anonymous"
 																	/>
 																</div>
-																<div style={{
-																	fontSize: '11px',
-																	fontWeight: '500',
-																	color: '#374151',
-																	wordWrap: 'break-word'
-																}}>
+																<div
+																	style={{
+																		fontSize: "11px",
+																		fontWeight: "500",
+																		color: "#374151",
+																		wordWrap: "break-word",
+																	}}
+																>
 																	{char.name}
 																</div>
 															</div>
@@ -1832,10 +1918,11 @@ export default function Home() {
 													📱 Social Media Ready Format (1080x1080)
 												</p>
 												<p className="text-xs text-gray-500">
-													Click "Generate & Download" to create your shareable comic page
+													Click "Generate & Download" to create your shareable
+													comic page
 												</p>
 											</div>
-											
+
 											{/* Mini preview */}
 											<div className="max-w-xs mx-auto bg-white p-2 rounded shadow-sm">
 												<div className="aspect-square bg-gray-100 rounded flex flex-col">
@@ -1846,10 +1933,13 @@ export default function Home() {
 													</div>
 													<div className="flex-1 flex">
 														<div className="flex-1 grid grid-cols-2 gap-1 p-2">
-															{generatedPanels.slice(0, 4).map((panel, idx) => (
-																<div key={idx} className="bg-gray-200 rounded aspect-square">
-																	<img 
-																		src={panel.image} 
+															{generatedPanels.slice(0, 4).map((panel) => (
+																<div
+																	key={`preview-panel-${panel.panelNumber}`}
+																	className="bg-gray-200 rounded aspect-square"
+																>
+																	<img
+																		src={panel.image}
 																		alt={`Panel ${panel.panelNumber}`}
 																		className="w-full h-full object-cover rounded"
 																	/>
@@ -1857,10 +1947,13 @@ export default function Home() {
 															))}
 														</div>
 														<div className="w-12 p-1">
-															{characterReferences.slice(0, 3).map((char, idx) => (
-																<div key={idx} className="bg-gray-200 rounded mb-1 aspect-square">
-																	<img 
-																		src={char.image} 
+															{characterReferences.slice(0, 3).map((char) => (
+																<div
+																	key={`preview-char-${char.name}`}
+																	className="bg-gray-200 rounded mb-1 aspect-square"
+																>
+																	<img
+																		src={char.image}
 																		alt={char.name}
 																		className="w-full h-full object-cover rounded"
 																	/>
@@ -1875,7 +1968,8 @@ export default function Home() {
 								) : (
 									<div>
 										<p className="text-manga-medium-gray">
-											Complete all previous steps to create a shareable social media composite of your comic and characters.
+											Complete all previous steps to create a shareable social
+											media composite of your comic and characters.
 										</p>
 									</div>
 								)}
@@ -1941,6 +2035,71 @@ export default function Home() {
 							</svg>
 						</button>
 						<img src={modalImage} alt={modalAlt} className="image-modal-img" />
+					</div>
+				</div>
+			)}
+
+			{/* Confirmation Modal */}
+			{showConfirmClearModal && (
+				<div
+					className="confirmation-modal-overlay"
+					onClick={cancelClearData}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") {
+							cancelClearData();
+						}
+					}}
+					role="dialog"
+					aria-modal="true"
+					aria-label="Confirm clear data"
+					tabIndex={-1}
+				>
+					<div
+						className="confirmation-modal-content"
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.stopPropagation()}
+						role="document"
+					>
+						<div className="confirmation-modal-header">
+							<div className="confirmation-modal-icon">
+								<svg
+									width="48"
+									height="48"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									aria-hidden="true"
+								>
+									<title>Warning</title>
+									<path d="M12 9v4M12 17h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+								</svg>
+							</div>
+							<h3 className="confirmation-modal-title">
+								Clear All Saved Data?
+							</h3>
+							<p className="confirmation-modal-message">
+								Are you sure you want to clear all saved data? This will delete
+								your story, characters, and panels permanently. This action
+								cannot be undone.
+							</p>
+						</div>
+						<div className="confirmation-modal-actions">
+							<button
+								type="button"
+								className="btn-manga-outline confirmation-modal-cancel"
+								onClick={cancelClearData}
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								className="btn-manga-primary confirmation-modal-confirm"
+								onClick={confirmClearAllData}
+							>
+								🗑️ Clear All Data
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
