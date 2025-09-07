@@ -1694,8 +1694,8 @@ export default function Home() {
 												position: 'fixed',
 												left: '-9999px',
 												top: '0',
-												width: '1080px',
-												height: '1080px',
+												width: '1200px',
+												height: '1200px',
 												backgroundColor: '#ffffff',
 												padding: '32px',
 												fontFamily: 'system-ui, sans-serif'
@@ -1722,7 +1722,7 @@ export default function Home() {
 											</div>
 
 											{/* Main content area */}
-											<div style={{ display: 'flex', height: '850px' }}>
+											<div style={{ display: 'flex', height: '970px' }}>
 												{/* Panels section - 75% width */}
 												<div style={{ width: '75%', paddingRight: '16px' }}>
 													<div style={{ 
@@ -1739,31 +1739,27 @@ export default function Home() {
 															'1fr 1fr'
 													}}>
 														{generatedPanels.map((panel) => (
-															<div key={`composite-panel-${panel.panelNumber}`} style={{ position: 'relative' }}>
+															<div key={`composite-panel-${panel.panelNumber}`} style={{ 
+																position: 'relative',
+																display: 'flex',
+																alignItems: 'center',
+																justifyContent: 'center',
+																backgroundColor: '#f9fafb'
+															}}>
 																<img
 																	src={panel.image}
 																	alt={`Panel ${panel.panelNumber}`}
 																	style={{
-																		width: '100%',
-																		height: '100%',
-																		objectFit: 'cover',
+																		maxWidth: '100%',
+																		maxHeight: '100%',
+																		width: 'auto',
+																		height: 'auto',
+																		objectFit: 'contain',
 																		borderRadius: '8px',
 																		border: '2px solid #d1d5db'
 																	}}
 																	crossOrigin="anonymous"
 																/>
-																<div style={{
-																	position: 'absolute',
-																	bottom: '4px',
-																	right: '4px',
-																	backgroundColor: 'rgba(0, 0, 0, 0.75)',
-																	color: '#ffffff',
-																	fontSize: '12px',
-																	padding: '4px 8px',
-																	borderRadius: '4px'
-																}}>
-																	{panel.panelNumber}
-																</div>
 															</div>
 														))}
 													</div>
@@ -1788,21 +1784,32 @@ export default function Home() {
 													<div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 														{characterReferences.slice(0, 3).map((char) => (
 															<div key={`composite-char-${char.name}`} style={{ textAlign: 'center' }}>
-																<img
-																	src={char.image}
-																	alt={char.name}
-																	style={{
-																		width: '100%',
-																		height: 'auto',
-																		maxHeight: '140px',
-																		objectFit: 'contain',
-																		borderRadius: '6px',
-																		border: '1px solid #d1d5db',
-																		marginBottom: '8px',
-																		backgroundColor: '#f9fafb'
-																	}}
-																	crossOrigin="anonymous"
-																/>
+																<div style={{
+																	width: '200px',
+																	height: '200px',
+																	display: 'flex',
+																	alignItems: 'center',
+																	justifyContent: 'center',
+																	backgroundColor: '#f9fafb',
+																	borderRadius: '6px',
+																	border: '1px solid #d1d5db',
+																	marginBottom: '8px',
+																	margin: '0 auto 8px auto'
+																}}>
+																	<img
+																		src={char.image}
+																		alt={char.name}
+																		style={{
+																			maxWidth: '100%',
+																			maxHeight: '100%',
+																			width: 'auto',
+																			height: 'auto',
+																			objectFit: 'contain',
+																			borderRadius: '4px'
+																		}}
+																		crossOrigin="anonymous"
+																	/>
+																</div>
 																<div style={{
 																	fontSize: '11px',
 																	fontWeight: '500',
