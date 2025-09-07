@@ -1,4 +1,4 @@
-# Story to Manga Generator
+# Story to Manga Machine
 
 Transform your written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API!
 

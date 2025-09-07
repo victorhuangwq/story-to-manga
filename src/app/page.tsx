@@ -1445,7 +1445,7 @@ export default function Home() {
 				title: "Story Analysis Export",
 				exportDate: new Date().toISOString(),
 				style: style,
-				generatedBy: "Story to Manga Generator",
+				generatedBy: "Story to Manga Machine",
 			},
 			storyAnalysis: {
 				title: storyAnalysis.title,
@@ -1473,7 +1473,7 @@ export default function Home() {
 				title: "Comic Layout Export",
 				exportDate: new Date().toISOString(),
 				style: style,
-				generatedBy: "Story to Manga Generator",
+				generatedBy: "Story to Manga Machine",
 			},
 			storyTitle: storyAnalysis.title,
 			panelCount: storyBreakdown.panels.length,
@@ -1648,11 +1648,11 @@ export default function Home() {
 				<a
 					href="/"
 					className="inline-flex items-center hover:opacity-80 transition-opacity"
-					title="Story to Manga Generator - Home"
+					title="Story to Manga Machine - Home"
 				>
 					<img
 						src="/logo.png"
-						alt="Story to Manga Generator Logo"
+						alt="Story to Manga Machine Logo"
 						className="w-8 h-8 rounded"
 					/>
 				</a>
