@@ -1615,7 +1615,7 @@ export default function Home() {
 												isLoading={isDownloadingPanels}
 												label="Download All Panels"
 												loadingText="Creating zip..."
-												variant="primary"
+												variant="outline"
 											/>
 										</div>
 										<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
