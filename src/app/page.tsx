@@ -1298,7 +1298,7 @@ export default function Home() {
 				width: compositorRef.current?.offsetWidth,
 				height: compositorRef.current?.offsetHeight,
 				scrollWidth: compositorRef.current?.scrollWidth,
-				scrollHeight: compositorRef.current?.scrollHeight
+				scrollHeight: compositorRef.current?.scrollHeight,
 			});
 
 			const canvas = await html2canvas(compositorRef.current, {
