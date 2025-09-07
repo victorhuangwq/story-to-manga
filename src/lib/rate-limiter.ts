@@ -93,5 +93,3 @@ export function checkRateLimit(ip: string, endpoint: string): RateLimitResult {
 	const identifier = `${ip}:${endpoint}`;
 	return rateLimiter.check(identifier);
 }
-
-export type { RateLimitResult };

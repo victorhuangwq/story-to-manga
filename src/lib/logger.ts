@@ -1,7 +1,7 @@
 import pino, { type Logger } from "pino";
 
 // Create the base logger with environment-specific configuration
-export const logger: Logger =
+const logger: Logger =
 	process.env.NODE_ENV === "production"
 		? pino({
 				level: "info",
@@ -23,12 +23,11 @@ export const logger: Logger =
 			});
 
 // Create module-specific loggers
-export const createModuleLogger = (module: string) => {
+const createModuleLogger = (module: string) => {
 	return logger.child({ module });
 };
 
 // Pre-configured loggers for different parts of the app
-export const apiLogger = createModuleLogger("api");
 export const storyAnalysisLogger = createModuleLogger("story-analysis");
 export const characterGenLogger = createModuleLogger("character-generation");
 export const storyChunkingLogger = createModuleLogger("story-chunking");
