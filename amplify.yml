@@ -1,0 +1,19 @@
+version: 3
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install next@latest
+        - npm install
+    build:
+      commands:
+        - echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" >> .env
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - .next/cache/**/*
+      - node_modules/**/*
