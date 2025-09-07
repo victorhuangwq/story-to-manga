@@ -68,8 +68,9 @@ input[type="radio"]:checked + .btn-manga-outline {
 }
 
 .style-manga .btn-manga-outline:hover:not(:disabled) {
-  background: var(--color-manga-black);
-  color: white;
+  background: var(--color-manga-black) !important;
+  color: white !important;
+  border-color: var(--color-manga-black);
 }
 
 .style-manga .btn-manga-outline:disabled {
@@ -150,8 +151,9 @@ input[type="radio"]:checked + .btn-manga-outline {
 }
 
 .style-comic .btn-manga-outline:hover:not(:disabled) {
-  background: var(--color-manga-black);
-  color: white;
+  background: var(--color-manga-black) !important;
+  color: white !important;
+  border-color: var(--color-manga-black);
 }
 
 .style-comic .btn-manga-outline:disabled {

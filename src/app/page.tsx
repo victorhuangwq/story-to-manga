@@ -1,5 +1,8 @@
 "use client";
 
+import html2canvas from "html2canvas";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
 	clearAllData,
 	getStorageInfo,
@@ -13,9 +16,6 @@ import type {
 	StoryAnalysis,
 	StoryBreakdown,
 } from "@/types";
-import html2canvas from "html2canvas";
-import JSZip from "jszip";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -1077,6 +1077,67 @@ export default function Home() {
 		}
 	};
 
+	const downloadStoryAnalysis = () => {
+		if (!storyAnalysis) return;
+
+		const exportData = {
+			metadata: {
+				title: "Story Analysis Export",
+				exportDate: new Date().toISOString(),
+				style: style,
+				generatedBy: "Story to Manga Generator",
+			},
+			storyAnalysis: {
+				title: storyAnalysis.title,
+				characters: storyAnalysis.characters,
+				setting: storyAnalysis.setting,
+			},
+		};
+
+		const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `story-analysis-${Date.now()}.json`;
+		link.click();
+		URL.revokeObjectURL(url);
+	};
+
+	const downloadComicLayout = () => {
+		if (!storyBreakdown || !storyAnalysis) return;
+
+		const exportData = {
+			metadata: {
+				title: "Comic Layout Export",
+				exportDate: new Date().toISOString(),
+				style: style,
+				generatedBy: "Story to Manga Generator",
+			},
+			storyTitle: storyAnalysis.title,
+			panelCount: storyBreakdown.panels.length,
+			panels: storyBreakdown.panels.map((panel) => ({
+				panelNumber: panel.panelNumber,
+				sceneDescription: panel.sceneDescription,
+				dialogue: panel.dialogue,
+				characters: panel.characters,
+				cameraAngle: panel.cameraAngle,
+				visualMood: panel.visualMood,
+			})),
+		};
+
+		const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `comic-layout-${Date.now()}.json`;
+		link.click();
+		URL.revokeObjectURL(url);
+	};
+
 	// Load state on component mount
 	useEffect(() => {
 		const initializeApp = async () => {
@@ -1462,6 +1523,18 @@ export default function Home() {
 							>
 								{storyAnalysis ? (
 									<div>
+										<div className="flex justify-between items-center mb-3">
+											<h5 className="font-semibold">Story Analysis</h5>
+											<DownloadButton
+												onClick={downloadStoryAnalysis}
+												isLoading={false}
+												label="Download"
+												loadingText=""
+												variant="outline"
+											/>
+										</div>
+										<h5 className="font-semibold mb-2">Title:</h5>
+										<p className="mb-3">{storyAnalysis.title}</p>
 										<h5 className="font-semibold mb-2">Characters:</h5>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 											{storyAnalysis.characters.map((char) => (
@@ -1596,9 +1669,18 @@ export default function Home() {
 							>
 								{storyBreakdown ? (
 									<div>
-										<h5 className="font-semibold mb-2">
-											Panel Sequence ({storyBreakdown.panels.length} panels)
-										</h5>
+										<div className="flex justify-between items-center mb-3">
+											<h5 className="font-semibold">
+												Panel Sequence ({storyBreakdown.panels.length} panels)
+											</h5>
+											<DownloadButton
+												onClick={downloadComicLayout}
+												isLoading={false}
+												label="Download"
+												loadingText=""
+												variant="outline"
+											/>
+										</div>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 											{storyBreakdown.panels.map((panel) => (
 												<PanelCard
@@ -1755,15 +1837,20 @@ export default function Home() {
 											}}
 										>
 											{/* Header with title and branding */}
-											<div style={{ textAlign: 'center', marginBottom: '24px' }}>
-												<h1 style={{ 
-													fontSize: '30px', 
-													fontWeight: 'bold', 
-													color: '#1f2937',
-													marginBottom: '8px',
-													margin: '0 0 8px 0'
-												}}>
-													{storyAnalysis?.title || `${style === "manga" ? "Manga" : "Comic"} Story`}
+											<div
+												style={{ textAlign: "center", marginBottom: "24px" }}
+											>
+												<h1
+													style={{
+														fontSize: "30px",
+														fontWeight: "bold",
+														color: "#1f2937",
+														marginBottom: "8px",
+														margin: "0 0 8px 0",
+													}}
+												>
+													{storyAnalysis?.title ||
+														`${style === "manga" ? "Manga" : "Comic"} Story`}
 												</h1>
 												<div
 													style={{
@@ -1914,9 +2001,6 @@ export default function Home() {
 										{/* Preview (visible version) */}
 										<div className="bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-300">
 											<div className="text-center text-gray-600 mb-4">
-												<p className="text-sm">
-													📱 Social Media Ready Format (1080x1080)
-												</p>
 												<p className="text-xs text-gray-500">
 													Click "Generate & Download" to create your shareable
 													comic page

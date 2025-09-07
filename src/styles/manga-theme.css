@@ -311,10 +311,12 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   background: var(--manga-black);
   transition: width 0.3s ease;
   z-index: -1;
+  border-radius: inherit;
 }
 
-.style-manga .btn-manga-outline:hover {
-  color: var(--manga-white);
+.style-manga .btn-manga-outline:hover,
+.style-manga .btn-manga-outline.text-sm:hover {
+  color: var(--manga-white) !important;
 }
 
 .style-manga .btn-manga-outline:hover::before {
@@ -353,9 +355,10 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   transition: all 0.3s ease;
 }
 
-.style-comic .btn-manga-outline:hover {
-  background: var(--manga-black);
-  color: var(--manga-white);
+.style-comic .btn-manga-outline:hover,
+.style-comic .btn-manga-outline.text-sm:hover {
+  background: var(--manga-black) !important;
+  color: var(--manga-white) !important;
 }
 
 /* Card Styles */
