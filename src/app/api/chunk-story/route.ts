@@ -109,7 +109,7 @@ Style: ${style}
 
 ${layoutGuidance}
 
-Create 2-20 panels based on the story's complexity and pacing needs. Choose the optimal number of panels to tell this story effectively - simple stories may need fewer panels (2-6), while complex narratives may require more (8-20).
+Create 2-15 panels based on the story's complexity and pacing needs. Choose the optimal number of panels to tell this story effectively - simple stories may need fewer panels (2-6), while complex narratives may require more (8-12).
 
 For each panel, describe:
 - Characters present
