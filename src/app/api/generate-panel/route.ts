@@ -100,7 +100,7 @@ IMPORTANT: Use the character reference images provided to maintain visual consis
 
 The panel should include:
 - Clear panel border
-- Speech bubbles with dialogue text (if any)
+- Speech bubbles with dialogue text (if any) - IMPORTANT: If dialogue includes character attribution like "Character: 'text'", only put the spoken text in the speech bubble, NOT the character name
 - Thought bubbles if needed
 - Sound effects where appropriate
 - Consistent character designs matching the references
