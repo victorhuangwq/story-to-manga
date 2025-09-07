@@ -134,6 +134,9 @@ Return as a flat array of panels with sequential panel numbers.
 			model: model,
 			contents: prompt,
 			config: {
+				thinkingConfig: {
+					thinkingBudget: 8192,  // Give model time to think through panel layout
+				},
 				responseMimeType: "application/json",
 				responseSchema: {
 					type: Type.OBJECT,
