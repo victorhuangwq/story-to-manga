@@ -202,21 +202,25 @@ Generate a single comic panel image with proper framing and composition.
 		};
 
 		try {
-			// Try generation with single retry for "No content parts received" error
+			// Try generation with single retry for transient failures
 			try {
 				return await attemptGeneration(1);
 			} catch (error) {
-				if (
+				const shouldRetry =
 					error instanceof Error &&
-					error.message === "No content parts received"
-				) {
+					(error.message === "No content parts received" ||
+						error.message.includes("fetch failed") ||
+						error.message.includes("network error") ||
+						error.message.includes("timeout"));
+
+				if (shouldRetry) {
 					panelLogger.warn(
 						{
 							panel_number: panel.panelNumber,
 							error_message: error.message,
 							duration_ms: Date.now() - startTime,
 						},
-						"First attempt failed with 'No content parts received', retrying once",
+						"First attempt failed with transient error, retrying once",
 					);
 
 					// Wait 1.5 seconds before retry
