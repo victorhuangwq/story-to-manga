@@ -1,6 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Bangers:wght@400&family=Comfortaa:wght@300;400;700&family=Permanent+Marker&family=M+PLUS+1:wght@300;400;700&family=Sawarabi+Gothic&family=Zen+Old+Mincho:wght@400;700&display=swap');
 @import "tailwindcss";
 
+/* Override Tailwind's modern color functions with hex fallbacks */
+@supports not (color: oklch(0 0 0)) {
+  :root {
+    /* Ensure fallback colors for browsers that don't support oklch */
+    color-scheme: light;
+  }
+}
+
 @theme {
   --color-manga-white: #FFFFFF;
   --color-manga-off-white: #FAFAFA;
