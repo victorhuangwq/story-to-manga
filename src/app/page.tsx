@@ -1,8 +1,5 @@
 "use client";
 
-import html2canvas from "html2canvas";
-import JSZip from "jszip";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
 import ImageUpload from "@/components/ImageUpload";
 import {
 	clearAllData,
@@ -19,6 +16,9 @@ import type {
 	UploadedCharacterReference,
 	UploadedSettingReference,
 } from "@/types";
+import html2canvas from "html2canvas";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -666,6 +666,40 @@ function ShareableComicLayout({
 	);
 }
 
+// This should be a compelling story under 500 words that showcases the app's capabilities
+const SAMPLE_STORY_TEXT = `One Hour Left
+
+Victor eyed the timer: 01:00:00. “Plenty of time.”
+Kingston sighed. “That sentence always ages badly. We need to move.”
+
+They stared at the whiteboard. “Video, demo, write-up,” Kingston said.
+“So… everything,” Victor said. “All of it,” Kingston said. “Fast.”
+
+They opened the app. Victor pasted this story. “Going meta. Hitting Generate.”
+“Good. If it works on us, it works on anything,” Kingston said.
+
+Character refs appeared: Victor in a hoodie, Kingston with glasses.
+“Hey, that’s actually us,” Victor said. “Lock these on every panel,” Kingston said. “No face drift.”
+
+“Style pick?” Victor asked.
+“Manga,” Kingston said. “Decide once, stay consistent.”
+
+Layout spun up. Panel plan and bubbles drafted.
+“Readable,” Victor said. “Let it run.”
+
+Panels started streaming.
+“Faces hold. Hair behaves,” Victor said. “Finally,” Kingston said.
+
+One panel stalled.
+“Panel six hiccup. Rerun it,” Kingston said. “On it,” Victor said. “Clean now.”
+
+“Download All,” Victor said. “And the poster?”
+“Create Shareable Image,” Kingston clicked. Tiles snapped into a neat grid.
+
+The timer flipped to 00:01:00.
+“Plenty of time,” Victor said.
+“Submit before you jinx it,” Kingston said.`
+
 export default function Home() {
 	// Generate unique IDs for form elements
 	const mangaRadioId = useId();
@@ -805,6 +839,11 @@ export default function Home() {
 		.trim()
 		.split(/\s+/)
 		.filter((word) => word.length > 0).length;
+
+	// Handler to populate story with sample text
+	const loadSampleText = () => {
+		setStory(SAMPLE_STORY_TEXT);
+	};
 
 	const generateComic = async () => {
 		if (!story.trim()) {
@@ -1824,6 +1863,19 @@ export default function Home() {
 								placeholder="Enter your story here... (max 500 words)"
 								disabled={isGenerating}
 							/>
+							{/* Try Sample Button - only show when story is empty or has very few words */}
+							{wordCount < 10 && (
+								<div className="mt-2">
+									<button
+										type="button"
+										className="btn-manga-secondary text-sm"
+										onClick={loadSampleText}
+										disabled={isGenerating}
+									>
+										📖 Try Sample Story
+									</button>
+								</div>
+							)}
 							{wordCount > 500 && (
 								<div className="text-manga-danger text-sm mt-1">
 									Story is too long. Please reduce to 500 words or less.
