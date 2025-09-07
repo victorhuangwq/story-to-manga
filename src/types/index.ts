@@ -44,3 +44,19 @@ export interface GeneratedPanel {
 	panelNumber: number;
 	image: string; // base64 data URL
 }
+
+// === Uploaded Reference Types ===
+
+export interface UploadedCharacterReference {
+	id: string; // unique identifier for the uploaded image
+	name: string; // user-provided name/description for the character
+	image: string; // base64 data URL
+	fileName: string; // original file name
+}
+
+export interface UploadedSettingReference {
+	id: string; // unique identifier for the uploaded image
+	name: string; // user-provided name/description for the setting
+	image: string; // base64 data URL
+	fileName: string; // original file name
+}

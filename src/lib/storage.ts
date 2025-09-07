@@ -4,6 +4,8 @@ import type {
 	GeneratedPanel,
 	StoryAnalysis,
 	StoryBreakdown,
+	UploadedCharacterReference,
+	UploadedSettingReference,
 } from "@/types";
 
 // Storage keys
@@ -24,6 +26,8 @@ interface PersistedState {
 	storyBreakdown: StoryBreakdown | null;
 	characterReferences: Omit<CharacterReference, "image">[];
 	generatedPanels: Omit<GeneratedPanel, "image">[];
+	uploadedCharacterReferences: Omit<UploadedCharacterReference, "image">[];
+	uploadedSettingReferences: Omit<UploadedSettingReference, "image">[];
 	timestamp: number;
 }
 
@@ -141,6 +145,8 @@ export async function saveState(
 	storyBreakdown: StoryBreakdown | null,
 	characterReferences: CharacterReference[],
 	generatedPanels: GeneratedPanel[],
+	uploadedCharacterReferences: UploadedCharacterReference[] = [],
+	uploadedSettingReferences: UploadedSettingReference[] = [],
 ): Promise<void> {
 	try {
 		// Save text data to localStorage
@@ -154,6 +160,12 @@ export async function saveState(
 				({ image, ...char }) => char,
 			),
 			generatedPanels: generatedPanels.map(({ image, ...panel }) => panel),
+			uploadedCharacterReferences: uploadedCharacterReferences.map(
+				({ image, ...ref }) => ref,
+			),
+			uploadedSettingReferences: uploadedSettingReferences.map(
+				({ image, ...ref }) => ref,
+			),
 			timestamp: Date.now(),
 		};
 
@@ -179,6 +191,26 @@ export async function saveState(
 			}
 		}
 
+		// Store uploaded character reference images
+		for (const charRef of uploadedCharacterReferences) {
+			if (charRef.image) {
+				await imageStorage.storeImage(
+					`uploaded-char-${charRef.id}`,
+					charRef.image,
+				);
+			}
+		}
+
+		// Store uploaded setting reference images
+		for (const settingRef of uploadedSettingReferences) {
+			if (settingRef.image) {
+				await imageStorage.storeImage(
+					`uploaded-setting-${settingRef.id}`,
+					settingRef.image,
+				);
+			}
+		}
+
 		console.log("✅ State saved successfully");
 	} catch (error) {
 		console.error("❌ Failed to save state:", error);
@@ -193,6 +225,8 @@ export async function loadState(): Promise<{
 	storyBreakdown: StoryBreakdown | null;
 	characterReferences: CharacterReference[];
 	generatedPanels: GeneratedPanel[];
+	uploadedCharacterReferences: UploadedCharacterReference[];
+	uploadedSettingReferences: UploadedSettingReference[];
 } | null> {
 	try {
 		// Load text data from localStorage
@@ -240,8 +274,44 @@ export async function loadState(): Promise<{
 			}
 		}
 
+		// Restore uploaded character references
+		const uploadedCharacterReferences: UploadedCharacterReference[] = [];
+		for (const charRef of textState.uploadedCharacterReferences || []) {
+			try {
+				const image = await imageStorage.getImage(
+					`uploaded-char-${charRef.id}`,
+				);
+				if (image) {
+					uploadedCharacterReferences.push({ ...charRef, image });
+				}
+			} catch (error) {
+				console.warn(
+					`Failed to load uploaded character reference ${charRef.id}:`,
+					error,
+				);
+			}
+		}
+
+		// Restore uploaded setting references
+		const uploadedSettingReferences: UploadedSettingReference[] = [];
+		for (const settingRef of textState.uploadedSettingReferences || []) {
+			try {
+				const image = await imageStorage.getImage(
+					`uploaded-setting-${settingRef.id}`,
+				);
+				if (image) {
+					uploadedSettingReferences.push({ ...settingRef, image });
+				}
+			} catch (error) {
+				console.warn(
+					`Failed to load uploaded setting reference ${settingRef.id}:`,
+					error,
+				);
+			}
+		}
+
 		console.log(
-			`✅ State loaded successfully (${characterReferences.length} characters, ${generatedPanels.length} panels)`,
+			`✅ State loaded successfully (${characterReferences.length} characters, ${generatedPanels.length} panels, ${uploadedCharacterReferences.length} uploaded char refs, ${uploadedSettingReferences.length} uploaded setting refs)`,
 		);
 
 		return {
@@ -251,6 +321,8 @@ export async function loadState(): Promise<{
 			storyBreakdown: textState.storyBreakdown,
 			characterReferences,
 			generatedPanels,
+			uploadedCharacterReferences,
+			uploadedSettingReferences,
 		};
 	} catch (error) {
 		console.error("❌ Failed to load state:", error);

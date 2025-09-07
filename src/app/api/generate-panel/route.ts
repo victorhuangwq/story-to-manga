@@ -29,13 +29,20 @@ export async function POST(request: NextRequest) {
 	logApiRequest(panelLogger, endpoint);
 
 	try {
-		const { panel, characterReferences, setting, style } = await request.json();
+		const {
+			panel,
+			characterReferences,
+			setting,
+			style,
+			uploadedSettingReferences = [],
+		} = await request.json();
 
 		panelLogger.debug(
 			{
 				panel_number: panel?.panelNumber,
 				characters: panel?.characters,
 				character_refs_count: characterReferences?.length || 0,
+				uploaded_setting_refs_count: uploadedSettingReferences?.length || 0,
 				style,
 			},
 			"Received panel generation request",
@@ -88,7 +95,7 @@ export async function POST(request: NextRequest) {
 			})
 			.join(" and ");
 
-		const prompt = `
+		let prompt = `
 Create a single comic panel in ${stylePrefix}.
 
 Setting: ${setting.location}, ${setting.timePeriod}, mood: ${setting.mood}
@@ -97,7 +104,16 @@ Panel Details:
 Panel ${panel.panelNumber}: ${panel.cameraAngle} shot of ${charactersInPanel}. Scene: ${panel.sceneDescription}. ${panel.dialogue ? `Dialogue: "${panel.dialogue}"` : "No dialogue."}. Mood: ${panel.visualMood}.
 
 IMPORTANT: Use the character reference images provided to maintain visual consistency. Each character should match their appearance from the reference images exactly.
+`;
 
+		// Add setting reference instructions if available
+		if (uploadedSettingReferences.length > 0) {
+			prompt += `
+IMPORTANT: Use the provided setting/environment reference images to guide the visual style, atmosphere, and environmental details of this panel. Incorporate the visual elements, lighting, and mood shown in the setting references while adapting them to the ${stylePrefix} aesthetic.
+`;
+		}
+
+		prompt += `
 The panel should include:
 - Clear panel border
 - Speech bubbles with dialogue text (if any) - IMPORTANT: If dialogue includes character attribution like "Character: 'text'", only put the spoken text in the speech bubble, NOT the character name
@@ -108,7 +124,7 @@ The panel should include:
 Generate a single comic panel image with proper framing and composition.
 `;
 
-		// Prepare character reference images for input
+		// Prepare reference images for input
 		const inputParts: Array<
 			{ text: string } | { inlineData: { data: string; mimeType: string } }
 		> = [{ text: prompt }];
@@ -120,12 +136,20 @@ Generate a single comic panel image with proper framing and composition.
 			}
 		});
 
+		// Add uploaded setting reference images
+		uploadedSettingReferences.forEach((settingRef: { image?: string }) => {
+			if (settingRef.image) {
+				inputParts.push(prepareImageForGemini(settingRef.image));
+			}
+		});
+
 		panelLogger.info(
 			{
 				model: model,
 				panel_number: panel.panelNumber,
 				prompt_length: prompt.length,
 				character_refs_attached: characterReferences.length,
+				uploaded_setting_refs_attached: uploadedSettingReferences.length,
 				input_parts_count: inputParts.length,
 			},
 			"Calling Gemini API for panel generation",

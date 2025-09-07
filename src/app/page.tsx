@@ -3,6 +3,7 @@
 import html2canvas from "html2canvas";
 import JSZip from "jszip";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import ImageUpload from "@/components/ImageUpload";
 import {
 	clearAllData,
 	getStorageInfo,
@@ -15,6 +16,8 @@ import type {
 	GeneratedPanel,
 	StoryAnalysis,
 	StoryBreakdown,
+	UploadedCharacterReference,
+	UploadedSettingReference,
 } from "@/types";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
@@ -189,6 +192,60 @@ function AccordionSection({
 			<div className={`accordion-body ${isOpen ? "" : "hidden"}`}>
 				{children}
 			</div>
+		</div>
+	);
+}
+
+interface CollapsibleSectionProps {
+	title: string;
+	isExpanded: boolean;
+	onToggle: () => void;
+	children: React.ReactNode;
+	badge?: string | undefined;
+}
+
+function CollapsibleSection({
+	title,
+	isExpanded,
+	onToggle,
+	children,
+	badge,
+}: CollapsibleSectionProps) {
+	return (
+		<div className="border border-manga-medium-gray/30 rounded-lg">
+			<button
+				type="button"
+				className="w-full flex items-center justify-between p-3 text-left hover:bg-manga-medium-gray/10 transition-colors rounded-t-lg"
+				onClick={onToggle}
+			>
+				<div className="flex items-center gap-2">
+					<span className="font-medium text-manga-black">{title}</span>
+					{badge && (
+						<span className="inline-block bg-manga-info text-white px-2 py-1 rounded text-xs">
+							{badge}
+						</span>
+					)}
+				</div>
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					className={`transform transition-transform duration-200 ${
+						isExpanded ? "rotate-180" : ""
+					}`}
+				>
+					<title>Toggle section</title>
+					<path d="m6 9 6 6 6-6" />
+				</svg>
+			</button>
+			{isExpanded && (
+				<div className="border-t border-manga-medium-gray/30 p-3">
+					{children}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -619,6 +676,17 @@ export default function Home() {
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [currentStepText, setCurrentStepText] = useState("");
 
+	// Uploaded reference images state
+	const [uploadedCharacterReferences, setUploadedCharacterReferences] =
+		useState<UploadedCharacterReference[]>([]);
+	const [uploadedSettingReferences, setUploadedSettingReferences] = useState<
+		UploadedSettingReference[]
+	>([]);
+
+	// Collapsible sections state
+	const [isCharacterRefsExpanded, setIsCharacterRefsExpanded] = useState(false);
+	const [isSettingRefsExpanded, setIsSettingRefsExpanded] = useState(false);
+
 	// Modal state
 	const [modalImage, setModalImage] = useState<string | null>(null);
 	const [modalAlt, setModalAlt] = useState<string>("");
@@ -739,6 +807,7 @@ export default function Home() {
 					characters: analysis.characters,
 					setting: analysis.setting,
 					style,
+					uploadedCharacterReferences,
 				}),
 			});
 
@@ -798,6 +867,7 @@ export default function Home() {
 						characterReferences,
 						setting: analysis.setting,
 						style,
+						uploadedSettingReferences,
 					}),
 				});
 
@@ -847,6 +917,37 @@ export default function Home() {
 		link.href = imageUrl;
 		link.download = filename;
 		link.click();
+	};
+
+	// Uploaded reference image handlers
+	const handleCharacterReferenceAdd = (image: UploadedCharacterReference) => {
+		setUploadedCharacterReferences((prev) => [...prev, image]);
+	};
+
+	const handleCharacterReferenceRemove = (id: string) => {
+		setUploadedCharacterReferences((prev) =>
+			prev.filter((img) => img.id !== id),
+		);
+	};
+
+	const handleCharacterReferenceNameChange = (id: string, name: string) => {
+		setUploadedCharacterReferences((prev) =>
+			prev.map((img) => (img.id === id ? { ...img, name } : img)),
+		);
+	};
+
+	const handleSettingReferenceAdd = (image: UploadedSettingReference) => {
+		setUploadedSettingReferences((prev) => [...prev, image]);
+	};
+
+	const handleSettingReferenceRemove = (id: string) => {
+		setUploadedSettingReferences((prev) => prev.filter((img) => img.id !== id));
+	};
+
+	const handleSettingReferenceNameChange = (id: string, name: string) => {
+		setUploadedSettingReferences((prev) =>
+			prev.map((img) => (img.id === id ? { ...img, name } : img)),
+		);
 	};
 
 	const downloadImagesAsZip = async (
@@ -958,6 +1059,8 @@ export default function Home() {
 		setGeneratedPanels([]);
 		setError(null);
 		setFailedStep(null);
+		setUploadedCharacterReferences([]);
+		setUploadedSettingReferences([]);
 	};
 
 	// Retry functions for individual steps
@@ -1026,6 +1129,7 @@ export default function Home() {
 				characters: storyAnalysis.characters,
 				setting: storyAnalysis.setting,
 				style,
+				uploadedCharacterReferences,
 			}),
 		});
 
@@ -1090,6 +1194,7 @@ export default function Home() {
 					characterReferences,
 					setting: storyAnalysis.setting,
 					style,
+					uploadedSettingReferences,
 				}),
 			});
 
@@ -1158,6 +1263,7 @@ export default function Home() {
 					characters: storyAnalysis.characters,
 					setting: storyAnalysis.setting,
 					style,
+					uploadedCharacterReferences,
 				}),
 			});
 
@@ -1254,6 +1360,7 @@ export default function Home() {
 						characterReferences,
 						setting: storyAnalysis.setting,
 						style,
+						uploadedSettingReferences,
 					}),
 				});
 
@@ -1403,6 +1510,10 @@ export default function Home() {
 					setCharacterReferences(savedState.characterReferences);
 					setStoryBreakdown(savedState.storyBreakdown);
 					setGeneratedPanels(savedState.generatedPanels);
+					setUploadedCharacterReferences(
+						savedState.uploadedCharacterReferences,
+					);
+					setUploadedSettingReferences(savedState.uploadedSettingReferences);
 
 					// Auto-expand sections with content
 					const sectionsToExpand: string[] = [];
@@ -1444,6 +1555,8 @@ export default function Home() {
 					storyBreakdown,
 					characterReferences,
 					generatedPanels,
+					uploadedCharacterReferences,
+					uploadedSettingReferences,
 				);
 			} catch (error) {
 				console.error("Failed to save state:", error);
@@ -1457,7 +1570,9 @@ export default function Home() {
 			story.trim() ||
 			storyAnalysis ||
 			characterReferences.length > 0 ||
-			generatedPanels.length > 0
+			generatedPanels.length > 0 ||
+			uploadedCharacterReferences.length > 0 ||
+			uploadedSettingReferences.length > 0
 		) {
 			saveCurrentState();
 		}
@@ -1468,6 +1583,8 @@ export default function Home() {
 		storyBreakdown,
 		characterReferences,
 		generatedPanels,
+		uploadedCharacterReferences,
+		uploadedSettingReferences,
 		isLoadingState,
 	]);
 
@@ -1490,6 +1607,8 @@ export default function Home() {
 			setGeneratedPanels([]);
 			setError(null);
 			setFailedStep(null);
+			setUploadedCharacterReferences([]);
+			setUploadedSettingReferences([]);
 			setOpenAccordions(new Set());
 		} catch (error) {
 			console.error("Failed to clear data:", error);
@@ -1503,7 +1622,9 @@ export default function Home() {
 		story.trim() ||
 		storyAnalysis ||
 		characterReferences.length > 0 ||
-		generatedPanels.length > 0;
+		generatedPanels.length > 0 ||
+		uploadedCharacterReferences.length > 0 ||
+		uploadedSettingReferences.length > 0;
 	const storageInfo = getStorageInfo();
 
 	// Show loading screen while initializing
@@ -1645,6 +1766,59 @@ export default function Home() {
 									Story is too long. Please reduce to 500 words or less.
 								</div>
 							)}
+						</div>
+
+						{/* Reference Images Upload - Optional */}
+						<div className="mb-4 space-y-4">
+							{/* Character Reference Images */}
+							<CollapsibleSection
+								title="📸 Character Reference Images (Optional)"
+								isExpanded={isCharacterRefsExpanded}
+								onToggle={() =>
+									setIsCharacterRefsExpanded(!isCharacterRefsExpanded)
+								}
+								badge={
+									uploadedCharacterReferences.length > 0
+										? `${uploadedCharacterReferences.length} image${uploadedCharacterReferences.length !== 1 ? "s" : ""}`
+										: undefined
+								}
+							>
+								<ImageUpload
+									title="Character Reference Images"
+									description="Upload reference images of characters to guide their visual design. These will be used when generating character designs."
+									images={uploadedCharacterReferences}
+									onImageAdd={handleCharacterReferenceAdd}
+									onImageRemove={handleCharacterReferenceRemove}
+									onImageNameChange={handleCharacterReferenceNameChange}
+									maxImages={5}
+									maxSizeMB={10}
+								/>
+							</CollapsibleSection>
+
+							{/* Setting Reference Images */}
+							<CollapsibleSection
+								title="🏞️ Setting Reference Images (Optional)"
+								isExpanded={isSettingRefsExpanded}
+								onToggle={() =>
+									setIsSettingRefsExpanded(!isSettingRefsExpanded)
+								}
+								badge={
+									uploadedSettingReferences.length > 0
+										? `${uploadedSettingReferences.length} image${uploadedSettingReferences.length !== 1 ? "s" : ""}`
+										: undefined
+								}
+							>
+								<ImageUpload
+									title="Setting Reference Images"
+									description="Upload reference images of locations, environments, or scenes to guide the visual style of your comic panels."
+									images={uploadedSettingReferences}
+									onImageAdd={handleSettingReferenceAdd}
+									onImageRemove={handleSettingReferenceRemove}
+									onImageNameChange={handleSettingReferenceNameChange}
+									maxImages={5}
+									maxSizeMB={10}
+								/>
+							</CollapsibleSection>
 						</div>
 
 						{/* Error Display */}

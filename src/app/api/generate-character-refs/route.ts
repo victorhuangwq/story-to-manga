@@ -10,6 +10,18 @@ import {
 const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
 const model = "gemini-2.5-flash-image-preview";
 
+// Helper function to convert base64 to format expected by Gemini
+function prepareImageForGemini(base64Image: string) {
+	// Remove data:image/xxx;base64, prefix if present
+	const base64Data = base64Image.replace(/^data:image\/[^;]+;base64,/, "");
+	return {
+		inlineData: {
+			data: base64Data,
+			mimeType: "image/jpeg",
+		},
+	};
+}
+
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
 	const endpoint = "/api/generate-character-refs";
@@ -17,13 +29,19 @@ export async function POST(request: NextRequest) {
 	logApiRequest(characterGenLogger, endpoint);
 
 	try {
-		const { characters, setting, style } = await request.json();
+		const {
+			characters,
+			setting,
+			style,
+			uploadedCharacterReferences = [],
+		} = await request.json();
 
 		characterGenLogger.debug(
 			{
 				characters_count: characters?.length || 0,
 				style,
 				setting: !!setting,
+				uploaded_refs_count: uploadedCharacterReferences?.length || 0,
 			},
 			"Received character reference generation request",
 		);
@@ -71,7 +89,14 @@ export async function POST(request: NextRequest) {
 					? "Japanese manga style, black and white, detailed character design with clean line art and screentones, English text only"
 					: "American comic book style, colorful superhero art with bold colors and clean line art";
 
-			const prompt = `
+			// Find uploaded references that match this character
+			const matchingUploads = uploadedCharacterReferences.filter(
+				(ref: { name: string; image: string; id: string; fileName: string }) =>
+					ref.name.toLowerCase().includes(character.name.toLowerCase()) ||
+					character.name.toLowerCase().includes(ref.name.toLowerCase()),
+			);
+
+			let prompt = `
 Character reference sheet in ${stylePrefix}. 
 
 Full body character design showing front view of ${character.name}:
@@ -79,9 +104,42 @@ Full body character design showing front view of ${character.name}:
 - Personality: ${character.personality}
 - Role: ${character.role}
 - Setting context: ${setting.timePeriod}, ${setting.location}
+`;
+
+			// Add reference to uploaded images if any match
+			if (matchingUploads.length > 0) {
+				prompt += `
+
+IMPORTANT: Use the provided reference images as inspiration for this character's design. The reference images show visual elements that should be incorporated while adapting them to the ${stylePrefix} aesthetic. Maintain the essence and key visual features shown in the references.
+`;
+			} else if (uploadedCharacterReferences.length > 0) {
+				prompt += `
+
+Note: Reference images are provided, but use them as general style inspiration for this character design.
+`;
+			}
+
+			prompt += `
 
 The character should be drawn in a neutral pose against a plain background, showing their full design clearly for reference purposes. This is a character reference sheet that will be used to maintain consistency across multiple comic panels.
 `;
+
+			// Prepare input parts for Gemini API
+			const inputParts: Array<
+				{ text: string } | { inlineData: { data: string; mimeType: string } }
+			> = [{ text: prompt }];
+
+			// Add uploaded reference images to input
+			for (const upload of uploadedCharacterReferences as {
+				name: string;
+				image: string;
+				id: string;
+				fileName: string;
+			}[]) {
+				if (upload.image) {
+					inputParts.push(prepareImageForGemini(upload.image));
+				}
+			}
 
 			try {
 				characterGenLogger.debug(
@@ -89,13 +147,16 @@ The character should be drawn in a neutral pose against a plain background, show
 						character_name: character.name,
 						prompt_length: prompt.length,
 						style_prefix: `${stylePrefix.substring(0, 50)}...`,
+						matching_uploads: matchingUploads.length,
+						total_uploads: uploadedCharacterReferences.length,
+						input_parts_count: inputParts.length,
 					},
 					"Calling Gemini API for character generation",
 				);
 
 				const result = await genAI.models.generateContent({
 					model: model,
-					contents: prompt,
+					contents: inputParts,
 				});
 
 				// Process the response following the official pattern
