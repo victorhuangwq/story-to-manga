@@ -1664,10 +1664,10 @@ export default function Home() {
 								)}
 							</AccordionSection>
 
-							{/* Step 5: Social Media Compositor */}
+							{/* Step 5: Create Shareable Image */}
 							<AccordionSection
 								id={compositorHeadingId}
-								title="Social Media Compositor"
+								title="Create Shareable Image"
 								stepNumber={5}
 								isCompleted={false}
 								isOpen={openAccordions.has("compositor")}
