@@ -172,8 +172,25 @@ Generate a single comic panel image with proper framing and composition.
 
 			// Process the response following the official pattern
 			const candidate = result.candidates?.[0];
+
+			// Check for prohibited content finish reason
+			if (candidate?.finishReason === "PROHIBITED_CONTENT") {
+				panelLogger.warn(
+					{
+						panel_number: panel.panelNumber,
+						finish_reason: candidate.finishReason,
+						attempt: attemptNumber,
+					},
+					"Content blocked by safety filters",
+				);
+				throw new Error(
+					"PROHIBITED_CONTENT: Your content was blocked by Gemini safety filters.",
+					{ cause: result },
+				);
+			}
+
 			if (!candidate?.content?.parts) {
-				throw new Error("No content parts received");
+				throw new Error("No content parts received", { cause: result });
 			}
 
 			for (const part of candidate.content.parts) {
@@ -232,6 +249,7 @@ Generate a single comic panel image with proper framing and composition.
 			} catch (error) {
 				const shouldRetry =
 					error instanceof Error &&
+					!error.message.startsWith("PROHIBITED_CONTENT:") &&
 					(error.message === "No content parts received" ||
 						error.message.includes("fetch failed") ||
 						error.message.includes("network error") ||
@@ -242,6 +260,7 @@ Generate a single comic panel image with proper framing and composition.
 						{
 							panel_number: panel.panelNumber,
 							error_message: error.message,
+							error_cause: error.cause,
 							duration_ms: Date.now() - startTime,
 						},
 						"First attempt failed with transient error, retrying once",
@@ -280,6 +299,21 @@ Generate a single comic panel image with proper framing and composition.
 				error: "Panel generation failed",
 				panel_number: panel.panelNumber,
 			});
+
+			// Handle prohibited content with appropriate status and message
+			if (
+				error instanceof Error &&
+				error.message.startsWith("PROHIBITED_CONTENT:")
+			) {
+				return NextResponse.json(
+					{
+						error: error.message.replace("PROHIBITED_CONTENT: ", ""),
+						errorType: "PROHIBITED_CONTENT",
+					},
+					{ status: 400 },
+				);
+			}
+
 			return NextResponse.json(
 				{ error: `Failed to generate panel ${panel.panelNumber}` },
 				{ status: 500 },

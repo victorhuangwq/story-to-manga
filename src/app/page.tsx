@@ -1,5 +1,8 @@
 "use client";
 
+import html2canvas from "html2canvas";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import ImageUpload from "@/components/ImageUpload";
 import {
 	clearAllData,
@@ -16,9 +19,6 @@ import type {
 	UploadedCharacterReference,
 	UploadedSettingReference,
 } from "@/types";
-import html2canvas from "html2canvas";
-import JSZip from "jszip";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -445,7 +445,13 @@ function ShareableComicLayout({
 								</div>
 							))}
 							{remainingPanels > 0 && (
-								<div className="absolute bottom-2 right-2 text-[12px] px-2 py-1 rounded shadow-lg border" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#000000'}}>
+								<div
+									className="absolute bottom-2 right-2 text-[12px] px-2 py-1 rounded shadow-lg border"
+									style={{
+										backgroundColor: "rgba(255, 255, 255, 0.95)",
+										color: "#000000",
+									}}
+								>
 									+{remainingPanels} more
 								</div>
 							)}
@@ -464,7 +470,13 @@ function ShareableComicLayout({
 								</div>
 							))}
 							{remainingCharacters > 0 && (
-								<div className="absolute bottom-2 right-2 text-[12px] px-2 py-1 rounded shadow-lg border" style={{backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#000000'}}>
+								<div
+									className="absolute bottom-2 right-2 text-[12px] px-2 py-1 rounded shadow-lg border"
+									style={{
+										backgroundColor: "rgba(255, 255, 255, 0.95)",
+										color: "#000000",
+									}}
+								>
 									+{remainingCharacters}
 								</div>
 							)}
@@ -682,6 +694,19 @@ export default function Home() {
 				return "Rate limit exceeded. Please wait a minute and try again.";
 			}
 		}
+
+		if (response.status === 400) {
+			try {
+				const data = await response.json();
+				if (data.errorType === "PROHIBITED_CONTENT") {
+					return `⚠️ Content Safety Issue: ${data.error}\n\nTip: Try modifying your story to remove potentially inappropriate content, violence, or mature themes.`;
+				}
+				return data.error || defaultMessage;
+			} catch {
+				return defaultMessage;
+			}
+		}
+
 		return defaultMessage;
 	};
 
@@ -707,6 +732,8 @@ export default function Home() {
 	const [modalAlt, setModalAlt] = useState<string>("");
 	const [showConfirmClearModal, setShowConfirmClearModal] =
 		useState<boolean>(false);
+	const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+	const [errorModalMessage, setErrorModalMessage] = useState<string>("");
 
 	// Download state
 	const [isDownloadingCharacters, setIsDownloadingCharacters] = useState(false);
@@ -781,12 +808,12 @@ export default function Home() {
 
 	const generateComic = async () => {
 		if (!story.trim()) {
-			setError("Please enter a story");
+			showError("Please enter a story");
 			return;
 		}
 
 		if (wordCount > 500) {
-			setError("Story must be 500 words or less");
+			showError("Story must be 500 words or less");
 			return;
 		}
 
@@ -887,12 +914,11 @@ export default function Home() {
 				});
 
 				if (!panelResponse.ok) {
-					throw new Error(
-						await handleApiError(
-							panelResponse,
-							`Failed to generate panel ${i + 1}`,
-						),
+					const errorMessage = await handleApiError(
+						panelResponse,
+						`Failed to generate panel ${i + 1}`,
 					);
+					throw new Error(errorMessage);
 				}
 
 				const { generatedPanel } = await panelResponse.json();
@@ -911,7 +937,7 @@ export default function Home() {
 			console.error("Generation error:", error);
 			const errorMessage =
 				error instanceof Error ? error.message : "Generation failed";
-			setError(errorMessage);
+			showError(errorMessage);
 			setIsGenerating(false);
 
 			// Determine which step failed based on current progress
@@ -1049,11 +1075,25 @@ export default function Home() {
 		setShowConfirmClearModal(false);
 	}, []);
 
+	// Handle error modal
+	const closeErrorModal = useCallback(() => {
+		setShowErrorModal(false);
+		setErrorModalMessage("");
+	}, []);
+
+	const showError = useCallback((message: string) => {
+		setError(message);
+		setErrorModalMessage(message);
+		setShowErrorModal(true);
+	}, []);
+
 	// Handle escape key for modals
 	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
-				if (showConfirmClearModal) {
+				if (showErrorModal) {
+					closeErrorModal();
+				} else if (showConfirmClearModal) {
 					cancelClearData();
 				} else if (modalImage) {
 					closeImageModal();
@@ -1061,11 +1101,18 @@ export default function Home() {
 			}
 		};
 
-		if (modalImage || showConfirmClearModal) {
+		if (modalImage || showConfirmClearModal || showErrorModal) {
 			document.addEventListener("keydown", handleEscape);
 			return () => document.removeEventListener("keydown", handleEscape);
 		}
-	}, [modalImage, showConfirmClearModal, closeImageModal, cancelClearData]);
+	}, [
+		modalImage,
+		showConfirmClearModal,
+		showErrorModal,
+		closeImageModal,
+		cancelClearData,
+		closeErrorModal,
+	]);
 
 	const clearResults = () => {
 		setStoryAnalysis(null);
@@ -1108,7 +1155,7 @@ export default function Home() {
 			setIsGenerating(false);
 		} catch (error) {
 			console.error("Retry error:", error);
-			setError(error instanceof Error ? error.message : "Retry failed");
+			showError(error instanceof Error ? error.message : "Retry failed");
 			setIsGenerating(false);
 			setFailedStep(step);
 		}
@@ -1214,9 +1261,11 @@ export default function Home() {
 			});
 
 			if (!response.ok) {
-				throw new Error(
-					await handleApiError(response, `Failed to generate panel ${i + 1}`),
+				const errorMessage = await handleApiError(
+					response,
+					`Failed to generate panel ${i + 1}`,
 				);
+				throw new Error(errorMessage);
 			}
 
 			const { generatedPanel } = await response.json();
@@ -1257,7 +1306,7 @@ export default function Home() {
 			setCurrentStepText("Analysis updated! 🎉");
 		} catch (error) {
 			console.error("Re-run analysis error:", error);
-			setError(error instanceof Error ? error.message : "Re-analysis failed");
+			showError(error instanceof Error ? error.message : "Re-analysis failed");
 		} finally {
 			setIsRerunningAnalysis(false);
 		}
@@ -1297,7 +1346,7 @@ export default function Home() {
 			setCurrentStepText("Character designs updated! 🎉");
 		} catch (error) {
 			console.error("Re-run characters error:", error);
-			setError(
+			showError(
 				error instanceof Error
 					? error.message
 					: "Character regeneration failed",
@@ -1341,7 +1390,7 @@ export default function Home() {
 			setCurrentStepText("Layout plan updated! 🎉");
 		} catch (error) {
 			console.error("Re-run layout error:", error);
-			setError(
+			showError(
 				error instanceof Error ? error.message : "Layout regeneration failed",
 			);
 		} finally {
@@ -1380,12 +1429,11 @@ export default function Home() {
 				});
 
 				if (!response.ok) {
-					throw new Error(
-						await handleApiError(
-							response,
-							`Failed to regenerate panel ${i + 1}`,
-						),
+					const errorMessage = await handleApiError(
+						response,
+						`Failed to regenerate panel ${i + 1}`,
 					);
+					throw new Error(errorMessage);
 				}
 
 				const { generatedPanel } = await response.json();
@@ -1400,7 +1448,7 @@ export default function Home() {
 			setCurrentStepText("Panels updated! 🎉");
 		} catch (error) {
 			console.error("Re-run panels error:", error);
-			setError(
+			showError(
 				error instanceof Error ? error.message : "Panel regeneration failed",
 			);
 		} finally {
@@ -1446,7 +1494,7 @@ export default function Home() {
 			}, "image/png");
 		} catch (error) {
 			console.error("Failed to generate composite:", error);
-			setError("Failed to generate composite image");
+			showError("Failed to generate composite image");
 		} finally {
 			setIsGeneratingComposite(false);
 		}
@@ -1627,7 +1675,7 @@ export default function Home() {
 			setOpenAccordions(new Set());
 		} catch (error) {
 			console.error("Failed to clear data:", error);
-			setError("Failed to clear saved data");
+			showError("Failed to clear saved data");
 		}
 	};
 
@@ -2194,9 +2242,12 @@ export default function Home() {
 										</div>
 										<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 											{storyBreakdown.panels.map((panel, index) => {
-												const generatedPanel = generatedPanels.find(p => p.panelNumber === panel.panelNumber);
-												const isCurrentlyGenerating = isGenerating && 
-													currentStepText.includes("panel") && 
+												const generatedPanel = generatedPanels.find(
+													(p) => p.panelNumber === panel.panelNumber,
+												);
+												const isCurrentlyGenerating =
+													isGenerating &&
+													currentStepText.includes("panel") &&
 													generatedPanels.length === index;
 
 												if (generatedPanel) {
@@ -2213,22 +2264,32 @@ export default function Home() {
 												} else {
 													// Show placeholder for pending/generating panel
 													return (
-														<div 
-															key={`placeholder-panel-${panel.panelNumber}`} 
-															className={`card-manga ${isCurrentlyGenerating ? 'animate-pulse' : ''} border-dashed border-2 border-manga-medium-gray/50 bg-manga-medium-gray/10`}
+														<div
+															key={`placeholder-panel-${panel.panelNumber}`}
+															className={`card-manga ${isCurrentlyGenerating ? "animate-pulse" : ""} border-dashed border-2 border-manga-medium-gray/50 bg-manga-medium-gray/10`}
 														>
 															<div className="card-body text-center py-8">
 																{isCurrentlyGenerating ? (
 																	<>
 																		<div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-manga-black mb-2"></div>
-																		<h6 className="card-title text-manga-medium-gray">Generating Panel {panel.panelNumber}...</h6>
-																		<p className="card-text text-sm text-manga-medium-gray/80">{panel.sceneDescription}</p>
+																		<h6 className="card-title text-manga-medium-gray">
+																			Generating Panel {panel.panelNumber}...
+																		</h6>
+																		<p className="card-text text-sm text-manga-medium-gray/80">
+																			{panel.sceneDescription}
+																		</p>
 																	</>
 																) : (
 																	<>
-																		<h6 className="card-title text-manga-medium-gray">Panel {panel.panelNumber}</h6>
-																		<p className="card-text text-sm text-manga-medium-gray/80">Waiting to generate...</p>
-																		<p className="card-text text-xs text-manga-medium-gray/60 mt-2">{panel.sceneDescription}</p>
+																		<h6 className="card-title text-manga-medium-gray">
+																			Panel {panel.panelNumber}
+																		</h6>
+																		<p className="card-text text-sm text-manga-medium-gray/80">
+																			Waiting to generate...
+																		</p>
+																		<p className="card-text text-xs text-manga-medium-gray/60 mt-2">
+																			{panel.sceneDescription}
+																		</p>
 																	</>
 																)}
 															</div>
@@ -2253,7 +2314,8 @@ export default function Home() {
 								) : (
 									<div>
 										<p className="text-manga-medium-gray">
-											Your finished comic panels will appear here after the layout is planned!
+											Your finished comic panels will appear here after the
+											layout is planned!
 										</p>
 										{failedStep === "panels" &&
 											storyAnalysis &&
@@ -2396,6 +2458,62 @@ export default function Home() {
 							</svg>
 						</button>
 						<img src={modalImage} alt={modalAlt} className="image-modal-img" />
+					</div>
+				</div>
+			)}
+
+			{/* Error Modal */}
+			{showErrorModal && (
+				<div
+					className="confirmation-modal-overlay"
+					onClick={closeErrorModal}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") {
+							closeErrorModal();
+						}
+					}}
+					role="dialog"
+					aria-modal="true"
+					aria-label="Error message"
+					tabIndex={-1}
+				>
+					<div
+						className="confirmation-modal-content"
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.stopPropagation()}
+						role="document"
+					>
+						<div className="confirmation-modal-header">
+							<div className="confirmation-modal-icon text-manga-danger">
+								<svg
+									width="48"
+									height="48"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									aria-hidden="true"
+								>
+									<title>Error</title>
+									<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+								</svg>
+							</div>
+							<h3 className="confirmation-modal-title text-manga-danger">
+								Error
+							</h3>
+							<p className="confirmation-modal-message whitespace-pre-line">
+								{errorModalMessage}
+							</p>
+						</div>
+						<div className="confirmation-modal-actions">
+							<button
+								type="button"
+								className="btn-manga-primary confirmation-modal-confirm"
+								onClick={closeErrorModal}
+							>
+								OK
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
