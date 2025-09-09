@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from "@next/third-parties/google";
 import type { Metadata } from "next";
 import "../styles/manga-components.css";
 import "../styles/manga-theme.css";
@@ -16,7 +17,10 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body suppressHydrationWarning={true}>{children}</body>
+			<body suppressHydrationWarning={true}>
+				{children}
+				<GoogleAnalytics gaId={process.env["NEXT_PUBLIC_GA_MEASUREMENT_ID"]!} />
+			</body>
 		</html>
 	);
 }

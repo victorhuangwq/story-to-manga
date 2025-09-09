@@ -1,6 +1,16 @@
 "use client";
 
+import html2canvas from "html2canvas";
+import JSZip from "jszip";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import ImageUpload from "@/components/ImageUpload";
+import {
+	trackDownload,
+	trackError,
+	trackEvent,
+	trackMangaGeneration,
+	trackPerformance,
+} from "@/lib/analytics";
 import {
 	clearAllData,
 	getStorageInfo,
@@ -16,9 +26,6 @@ import type {
 	UploadedCharacterReference,
 	UploadedSettingReference,
 } from "@/types";
-import html2canvas from "html2canvas";
-import JSZip from "jszip";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 
@@ -698,7 +705,7 @@ One panel stalled.
 
 The timer flipped to 00:01:00.
 “Plenty of time,” Victor said.
-“Submit before you jinx it,” Kingston said.`
+“Submit before you jinx it,” Kingston said.`;
 
 export default function Home() {
 	// Generate unique IDs for form elements
@@ -807,8 +814,18 @@ export default function Home() {
 			const newSet = new Set(prev);
 			if (newSet.has(section)) {
 				newSet.delete(section);
+				trackEvent({
+					action: "collapse_section",
+					category: "user_interaction",
+					label: section,
+				});
 			} else {
 				newSet.add(section);
+				trackEvent({
+					action: "expand_section",
+					category: "user_interaction",
+					label: section,
+				});
 			}
 			return newSet;
 		});
@@ -843,6 +860,10 @@ export default function Home() {
 	// Handler to populate story with sample text
 	const loadSampleText = () => {
 		setStory(SAMPLE_STORY_TEXT);
+		trackEvent({
+			action: "load_sample_story",
+			category: "user_interaction",
+		});
 	};
 
 	const generateComic = async () => {
@@ -855,6 +876,15 @@ export default function Home() {
 			showError("Story must be 500 words or less");
 			return;
 		}
+
+		// Track generation start
+		const generationStartTime = Date.now();
+		trackEvent({
+			action: "start_generation",
+			category: "manga_generation",
+			label: style,
+			value: wordCount,
+		});
 
 		// Only reset error and set generating state - keep existing content visible
 		setIsGenerating(true);
@@ -957,6 +987,10 @@ export default function Home() {
 						panelResponse,
 						`Failed to generate panel ${i + 1}`,
 					);
+					trackError(
+						"panel_generation_failed",
+						`Panel ${i + 1}: ${errorMessage}`,
+					);
 					throw new Error(errorMessage);
 				}
 
@@ -967,17 +1001,28 @@ export default function Home() {
 				// Auto-expand panels section after first panel is generated
 				if (i === 0) {
 					setOpenAccordions(new Set(["panels"]));
+					// Track time to first panel
+					const timeToFirstPanel = Date.now() - generationStartTime;
+					trackPerformance("time_to_first_panel", timeToFirstPanel);
 				}
 			}
 
 			setCurrentStepText("Complete! 🎉");
 			setIsGenerating(false);
+
+			// Track successful generation
+			const generationTime = Date.now() - generationStartTime;
+			trackMangaGeneration(wordCount, panels.length);
+			trackPerformance("total_generation_time", generationTime);
 		} catch (error) {
 			console.error("Generation error:", error);
 			const errorMessage =
 				error instanceof Error ? error.message : "Generation failed";
 			showError(errorMessage);
 			setIsGenerating(false);
+
+			// Track error
+			trackError("generation_failed", errorMessage);
 
 			// Determine which step failed based on current progress
 			if (!storyAnalysis) {
@@ -997,11 +1042,16 @@ export default function Home() {
 		link.href = imageUrl;
 		link.download = filename;
 		link.click();
+		trackDownload("png");
 	};
 
 	// Uploaded reference image handlers
 	const handleCharacterReferenceAdd = (image: UploadedCharacterReference) => {
 		setUploadedCharacterReferences((prev) => [...prev, image]);
+		trackEvent({
+			action: "upload_character_reference",
+			category: "user_interaction",
+		});
 	};
 
 	const handleCharacterReferenceRemove = (id: string) => {
@@ -1018,6 +1068,10 @@ export default function Home() {
 
 	const handleSettingReferenceAdd = (image: UploadedSettingReference) => {
 		setUploadedSettingReferences((prev) => [...prev, image]);
+		trackEvent({
+			action: "upload_setting_reference",
+			category: "user_interaction",
+		});
 	};
 
 	const handleSettingReferenceRemove = (id: string) => {
@@ -1070,6 +1124,12 @@ export default function Home() {
 				filename: `comic-panel-${panel.panelNumber}.jpg`,
 			}));
 			await downloadImagesAsZip(images, "comic-panels.zip");
+			trackDownload("zip");
+			trackEvent({
+				action: "download_all_panels",
+				category: "user_interaction",
+				value: generatedPanels.length,
+			});
 		} finally {
 			setIsDownloadingPanels(false);
 		}
@@ -1094,6 +1154,12 @@ export default function Home() {
 				filename: `character-${char.name.toLowerCase().replace(/\s+/g, "-")}.jpg`,
 			}));
 			await downloadImagesAsZip(images, "character-designs.zip");
+			trackDownload("zip");
+			trackEvent({
+				action: "download_all_characters",
+				category: "user_interaction",
+				value: characterReferences.length,
+			});
 		} finally {
 			setIsDownloadingCharacters(false);
 		}
@@ -1102,6 +1168,11 @@ export default function Home() {
 	const openImageModal = useCallback((imageUrl: string, altText: string) => {
 		setModalImage(imageUrl);
 		setModalAlt(altText);
+		trackEvent({
+			action: "open_image_modal",
+			category: "user_interaction",
+			label: altText,
+		});
 	}, []);
 
 	const closeImageModal = useCallback(() => {
@@ -1167,6 +1238,12 @@ export default function Home() {
 	// Retry functions for individual steps
 	const retryFromStep = async (step: FailedStep) => {
 		if (!step) return;
+
+		trackEvent({
+			action: "retry_from_step",
+			category: "user_interaction",
+			label: step,
+		});
 
 		setIsGenerating(true);
 		setError(null);
@@ -1322,6 +1399,12 @@ export default function Home() {
 	const rerunAnalysis = async () => {
 		if (!story.trim()) return;
 
+		trackEvent({
+			action: "rerun_section",
+			category: "user_interaction",
+			label: "analysis",
+		});
+
 		setIsRerunningAnalysis(true);
 		setError(null);
 
@@ -1353,6 +1436,12 @@ export default function Home() {
 
 	const rerunCharacterDesigns = async () => {
 		if (!storyAnalysis) return;
+
+		trackEvent({
+			action: "rerun_section",
+			category: "user_interaction",
+			label: "characters",
+		});
 
 		setIsRerunningCharacters(true);
 		setError(null);
@@ -1398,6 +1487,12 @@ export default function Home() {
 	const rerunLayoutPlan = async () => {
 		if (!storyAnalysis) return;
 
+		trackEvent({
+			action: "rerun_section",
+			category: "user_interaction",
+			label: "layout",
+		});
+
 		setIsRerunningLayout(true);
 		setError(null);
 
@@ -1441,6 +1536,12 @@ export default function Home() {
 		if (!storyAnalysis || !storyBreakdown || characterReferences.length === 0) {
 			return;
 		}
+
+		trackEvent({
+			action: "rerun_section",
+			category: "user_interaction",
+			label: "panels",
+		});
 
 		setIsRerunningPanels(true);
 		setError(null);
@@ -1531,9 +1632,18 @@ export default function Home() {
 					URL.revokeObjectURL(url);
 				}
 			}, "image/png");
+			trackEvent({
+				action: "generate_composite",
+				category: "user_interaction",
+				label: style,
+			});
 		} catch (error) {
 			console.error("Failed to generate composite:", error);
 			showError("Failed to generate composite image");
+			trackError(
+				"composite_generation_failed",
+				error instanceof Error ? error.message : "Unknown error",
+			);
 		} finally {
 			setIsGeneratingComposite(false);
 		}
@@ -1817,7 +1927,14 @@ export default function Home() {
 									name="style"
 									id={mangaRadioId}
 									checked={style === "manga"}
-									onChange={() => setStyle("manga")}
+									onChange={() => {
+										setStyle("manga");
+										trackEvent({
+											action: "change_style",
+											category: "user_interaction",
+											label: "manga",
+										});
+									}}
 								/>
 								<label
 									className="btn-manga-outline flex-1 text-center cursor-pointer rounded-l-lg"
@@ -1832,7 +1949,14 @@ export default function Home() {
 									name="style"
 									id={comicRadioId}
 									checked={style === "comic"}
-									onChange={() => setStyle("comic")}
+									onChange={() => {
+										setStyle("comic");
+										trackEvent({
+											action: "change_style",
+											category: "user_interaction",
+											label: "comic",
+										});
+									}}
 								/>
 								<label
 									className="btn-manga-outline flex-1 text-center cursor-pointer rounded-r-lg"
@@ -1859,7 +1983,16 @@ export default function Home() {
 								className="form-control-manga"
 								rows={8}
 								value={story}
-								onChange={(e) => setStory(e.target.value)}
+								onChange={(e) => {
+									setStory(e.target.value);
+									// Track when user starts typing (once per session)
+									if (e.target.value.length === 1 && story.length === 0) {
+										trackEvent({
+											action: "start_typing_story",
+											category: "user_interaction",
+										});
+									}
+								}}
 								placeholder="Enter your story here... (max 500 words)"
 								disabled={isGenerating}
 							/>
