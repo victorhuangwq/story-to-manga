@@ -28,6 +28,7 @@ import type {
 } from "@/types";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
+type FailedPanel = { step: "panel"; panelNumber: number } | null;
 
 interface RerunButtonProps {
 	onClick: () => void;
@@ -800,6 +801,7 @@ export default function Home() {
 	const [generatedPanels, setGeneratedPanels] = useState<GeneratedPanel[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [failedStep, setFailedStep] = useState<FailedStep>(null);
+	const [failedPanel, setFailedPanel] = useState<FailedPanel>(null);
 
 	// Storage state
 	const [isLoadingState, setIsLoadingState] = useState(true);
@@ -991,6 +993,8 @@ export default function Home() {
 						"panel_generation_failed",
 						`Panel ${i + 1}: ${errorMessage}`,
 					);
+					// Store which panel failed
+					setFailedPanel({ step: "panel", panelNumber: i + 1 });
 					throw new Error(errorMessage);
 				}
 
@@ -1033,6 +1037,7 @@ export default function Home() {
 				setFailedStep("layout");
 			} else {
 				setFailedStep("panels");
+				// Note: failedPanel is already set in the panel generation loop
 			}
 		}
 	};
@@ -1231,6 +1236,7 @@ export default function Home() {
 		setGeneratedPanels([]);
 		setError(null);
 		setFailedStep(null);
+		setFailedPanel(null);
 		setUploadedCharacterReferences([]);
 		setUploadedSettingReferences([]);
 	};
@@ -1248,6 +1254,7 @@ export default function Home() {
 		setIsGenerating(true);
 		setError(null);
 		setFailedStep(null);
+		setFailedPanel(null);
 
 		try {
 			switch (step) {
@@ -1381,6 +1388,7 @@ export default function Home() {
 					response,
 					`Failed to generate panel ${i + 1}`,
 				);
+				setFailedPanel({ step: "panel", panelNumber: i + 1 });
 				throw new Error(errorMessage);
 			}
 
@@ -1593,6 +1601,110 @@ export default function Home() {
 			);
 		} finally {
 			setIsRerunningPanels(false);
+		}
+	};
+
+	// Retry a specific panel that failed
+	const retryFailedPanel = async (panelNumber: number) => {
+		if (!storyAnalysis || !storyBreakdown || characterReferences.length === 0) {
+			return;
+		}
+
+		const panelIndex = panelNumber - 1;
+		const panel = storyBreakdown.panels[panelIndex];
+		if (!panel) return;
+
+		trackEvent({
+			action: "retry_failed_panel",
+			category: "user_interaction",
+			label: `panel_${panelNumber}`,
+		});
+
+		setIsGenerating(true);
+		setError(null);
+		setFailedPanel(null);
+		setCurrentStepText(`Retrying panel ${panelNumber}...`);
+
+		try {
+			const response = await fetch("/api/generate-panel", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					panel,
+					characterReferences,
+					setting: storyAnalysis.setting,
+					style,
+					uploadedSettingReferences,
+				}),
+			});
+
+			if (!response.ok) {
+				const errorMessage = await handleApiError(
+					response,
+					`Failed to regenerate panel ${panelNumber}`,
+				);
+				setFailedPanel({ step: "panel", panelNumber });
+				throw new Error(errorMessage);
+			}
+
+			const { generatedPanel } = await response.json();
+
+			// Update the panels array with the new panel
+			const updatedPanels = [...generatedPanels];
+			// Check if panel already exists in the array
+			const existingIndex = updatedPanels.findIndex(
+				(p) => p.panelNumber === panelNumber,
+			);
+			if (existingIndex >= 0) {
+				updatedPanels[existingIndex] = generatedPanel;
+			} else {
+				// Insert at correct position
+				updatedPanels.splice(panelIndex, 0, generatedPanel);
+				updatedPanels.sort((a, b) => a.panelNumber - b.panelNumber);
+			}
+			setGeneratedPanels(updatedPanels);
+
+			// Continue generating remaining panels if any
+			const expectedCount = storyBreakdown.panels.length;
+			if (updatedPanels.length < expectedCount) {
+				for (let i = updatedPanels.length; i < expectedCount; i++) {
+					const nextPanel = storyBreakdown.panels[i];
+					setCurrentStepText(`Generating panel ${i + 1}/${expectedCount}...`);
+
+					const nextResponse = await fetch("/api/generate-panel", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							panel: nextPanel,
+							characterReferences,
+							setting: storyAnalysis.setting,
+							style,
+							uploadedSettingReferences,
+						}),
+					});
+
+					if (!nextResponse.ok) {
+						const errorMessage = await handleApiError(
+							nextResponse,
+							`Failed to generate panel ${i + 1}`,
+						);
+						setFailedPanel({ step: "panel", panelNumber: i + 1 });
+						throw new Error(errorMessage);
+					}
+
+					const { generatedPanel: nextGeneratedPanel } =
+						await nextResponse.json();
+					updatedPanels.push(nextGeneratedPanel);
+					setGeneratedPanels([...updatedPanels]);
+				}
+			}
+
+			setCurrentStepText("Complete! 🎉");
+			setIsGenerating(false);
+		} catch (error) {
+			console.error("Retry panel error:", error);
+			showError(error instanceof Error ? error.message : "Panel retry failed");
+			setIsGenerating(false);
 		}
 	};
 
@@ -1819,6 +1931,7 @@ export default function Home() {
 			setGeneratedPanels([]);
 			setError(null);
 			setFailedStep(null);
+			setFailedPanel(null);
 			setUploadedCharacterReferences([]);
 			setUploadedSettingReferences([]);
 			setOpenAccordions(new Set());
@@ -2076,18 +2189,32 @@ export default function Home() {
 								role="alert"
 							>
 								<strong>Error:</strong> {error}
-								{failedStep && (
+								{(failedStep || failedPanel) && (
 									<div className="mt-2">
-										<button
-											type="button"
-											className="px-3 py-1 text-sm border border-manga-danger text-manga-danger rounded hover:bg-manga-danger hover:text-white transition-colors"
-											onClick={() => retryFromStep(failedStep)}
-											disabled={isGenerating}
-										>
-											Retry from{" "}
-											{failedStep.charAt(0).toUpperCase() + failedStep.slice(1)}{" "}
-											Step
-										</button>
+										{failedPanel ? (
+											<button
+												type="button"
+												className="px-3 py-1 text-sm border border-manga-danger text-manga-danger rounded hover:bg-manga-danger hover:text-white transition-colors"
+												onClick={() =>
+													retryFailedPanel(failedPanel.panelNumber)
+												}
+												disabled={isGenerating}
+											>
+												Retry Panel {failedPanel.panelNumber}
+											</button>
+										) : failedStep ? (
+											<button
+												type="button"
+												className="px-3 py-1 text-sm border border-manga-danger text-manga-danger rounded hover:bg-manga-danger hover:text-white transition-colors"
+												onClick={() => retryFromStep(failedStep)}
+												disabled={isGenerating}
+											>
+												Retry from{" "}
+												{failedStep.charAt(0).toUpperCase() +
+													failedStep.slice(1)}{" "}
+												Step
+											</button>
+										) : null}
 									</div>
 								)}
 							</div>

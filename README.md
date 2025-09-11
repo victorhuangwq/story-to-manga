@@ -2,7 +2,31 @@
 
 Transform your written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API!
 
+**🎨 Try it now at [app.storytomanga.com](https://app.storytomanga.com)**
+
 *Built for the [Nano Banana Hackathon](https://www.kaggle.com/competitions/banana)* 🍌
+
+## Screenshots
+
+<div align="center">
+  <img src="screenshots/story-to-manga-homepage.png" alt="Story to Manga Homepage" width="600"/>
+  <p><em>Main interface with story input and generation workflow</em></p>
+</div>
+
+<div align="center">
+  <img src="screenshots/story-to-manga-character-refs.png" alt="Character Design Generation" width="600"/>
+  <p><em>AI-generated character reference sheets</em></p>
+</div>
+
+<div align="center">
+  <img src="screenshots/story-to-manga-panels-progress.png" alt="Panel Generation Progress" width="600"/>
+  <p><em>Real-time panel generation progress</em></p>
+</div>
+
+<div align="center">
+  <img src="screenshots/story-to-manga-meta-panels.png" alt="Final Manga Output" width="600"/>
+  <p><em>Complete manga page with all panels and character designs</em></p>
+</div>
 
 ## Features
 
@@ -22,7 +46,11 @@ Transform your written stories into stunning visual manga or comic book pages us
 - **Image Export**: HTML2Canvas for social media composite generation
 - **Deployment**: AWS Amplify Gen 2
 
-## Setup Instructions
+## Try It Online
+
+The easiest way to use Story to Manga is through our hosted version at **[app.storytomanga.com](https://app.storytomanga.com)**. No setup required!
+
+## Local Development Setup
 
 ### 1. Install Dependencies
 
@@ -66,6 +94,8 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 5. **Create Shareable Image**: Combine panels and character designs into a 1200x1200px social media-ready image
 
 ## Usage
+
+Visit **[app.storytomanga.com](https://app.storytomanga.com)** or run locally:
 
 1. Choose your preferred style (Manga or Comic)
 2. Paste your story (max 500 words)
