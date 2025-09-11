@@ -8,25 +8,28 @@ Transform your written stories into stunning visual manga or comic book pages us
 
 ## Screenshots
 
-<div align="center">
-  <img src="screenshots/story-to-manga-homepage.png" alt="Story to Manga Homepage" width="600"/>
-  <p><em>Main interface with story input and generation workflow</em></p>
-</div>
-
-<div align="center">
-  <img src="screenshots/story-to-manga-character-refs.png" alt="Character Design Generation" width="600"/>
-  <p><em>AI-generated character reference sheets</em></p>
-</div>
-
-<div align="center">
-  <img src="screenshots/story-to-manga-panels-progress.png" alt="Panel Generation Progress" width="600"/>
-  <p><em>Real-time panel generation progress</em></p>
-</div>
-
-<div align="center">
-  <img src="screenshots/story-to-manga-meta-panels.png" alt="Final Manga Output" width="600"/>
-  <p><em>Complete manga page with all panels and character designs</em></p>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="screenshots/story-to-manga-homepage.png" alt="Story to Manga Homepage" width="100%"/>
+      <br><sub><b>Main Interface</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/story-to-manga-character-refs.png" alt="Character Design Generation" width="100%"/>
+      <br><sub><b>Character Design</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="screenshots/story-to-manga-panels-progress.png" alt="Panel Generation Progress" width="100%"/>
+      <br><sub><b>Generation Progress</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/story-to-manga-meta-panels.png" alt="Final Manga Output" width="100%"/>
+      <br><sub><b>Final Output</b></sub>
+    </td>
+  </tr>
+</table>
 
 ## Features
 
