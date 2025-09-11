@@ -1,2 +1,7 @@
+packages:
+  - .
+
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
+  - oxc-resolver
+  - sharp
