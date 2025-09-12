@@ -534,7 +534,7 @@ function ShareableComicLayout({
 					}}
 				>
 					Generated with Story to {style === "manga" ? "Manga" : "Comic"}{" "}
-					Generator
+					Generator at storytomanga.com
 				</div>
 			</div>
 
