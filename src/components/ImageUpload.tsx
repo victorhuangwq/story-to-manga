@@ -1,20 +1,13 @@
 "use client";
 
 import { useCallback, useId, useState } from "react";
-import type {
-	UploadedCharacterReference,
-	UploadedSettingReference,
-} from "@/types";
+import { trackEvent } from "@/lib/analytics";
+import { useUploadStore } from "@/stores/useUploadStore";
 
 interface ImageUploadProps {
 	title: string;
 	description: string;
-	images: (UploadedCharacterReference | UploadedSettingReference)[];
-	onImageAdd: (
-		image: UploadedCharacterReference | UploadedSettingReference,
-	) => void;
-	onImageRemove: (id: string) => void;
-	onImageNameChange: (id: string, name: string) => void;
+	type: "character" | "setting";
 	accept?: string;
 	maxSizeMB?: number;
 	maxImages?: number;
@@ -23,14 +16,34 @@ interface ImageUploadProps {
 export default function ImageUpload({
 	title,
 	description,
-	images,
-	onImageAdd,
-	onImageRemove,
-	onImageNameChange,
+	type,
 	accept = "image/*",
 	maxSizeMB = 10,
 	maxImages = 5,
 }: ImageUploadProps) {
+	const {
+		uploadedCharacterReferences,
+		uploadedSettingReferences,
+		addCharacterReference,
+		removeCharacterReference,
+		updateCharacterReferenceName,
+		addSettingReference,
+		removeSettingReference,
+		updateSettingReferenceName,
+	} = useUploadStore();
+
+	const images =
+		type === "character"
+			? uploadedCharacterReferences
+			: uploadedSettingReferences;
+	const onImageAdd =
+		type === "character" ? addCharacterReference : addSettingReference;
+	const onImageRemove =
+		type === "character" ? removeCharacterReference : removeSettingReference;
+	const onImageNameChange =
+		type === "character"
+			? updateCharacterReferenceName
+			: updateSettingReferenceName;
 	const fileInputId = useId();
 	const [isDragging, setIsDragging] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -64,6 +77,10 @@ export default function ImageUpload({
 						fileName: file.name,
 					};
 					onImageAdd(newImage);
+					trackEvent({
+						action: `upload_${type}_reference`,
+						category: "user_interaction",
+					});
 					setError(null);
 				}
 			};
@@ -72,7 +89,7 @@ export default function ImageUpload({
 			};
 			reader.readAsDataURL(file);
 		},
-		[images.length, maxImages, maxSizeMB, onImageAdd],
+		[images.length, maxImages, maxSizeMB, onImageAdd, type],
 	);
 
 	const handleFileSelect = useCallback(
