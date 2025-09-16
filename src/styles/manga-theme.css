@@ -221,7 +221,6 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   border-radius: var(--manga-radius-minimal);
   box-shadow: var(--manga-shadow-subtle);
   position: relative;
-  overflow: hidden;
 }
 
 /* Traditional Japanese paper texture effect */
@@ -372,6 +371,7 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
 .card-manga .card-body {
   background: var(--manga-white) !important;
   color: var(--manga-charcoal) !important;
+  overflow: visible !important;
 }
 
 .card-manga .card-title {
@@ -706,47 +706,6 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
   color: var(--manga-charcoal);
 }
 
-/* Speech Bubble Effect */
-.speech-bubble {
-  position: relative;
-  background: var(--manga-white);
-  border: 2px solid var(--manga-black);
-  border-radius: 20px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
-
-.speech-bubble::after {
-  content: '';
-  position: absolute;
-  bottom: -12px;
-  left: 30px;
-  width: 0;
-  height: 0;
-  border: 12px solid transparent;
-  border-top-color: var(--manga-white);
-}
-
-.speech-bubble::before {
-  content: '';
-  position: absolute;
-  bottom: -15px;
-  left: 27px;
-  width: 0;
-  height: 0;
-  border: 15px solid transparent;
-  border-top-color: var(--manga-black);
-}
-
-/* Thought Bubble Effect */
-.thought-bubble {
-  position: relative;
-  background: var(--manga-light-gray);
-  border: 2px dashed var(--manga-dark-gray);
-  border-radius: 25px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
 
 /* Character Grid */
 .character-grid img {

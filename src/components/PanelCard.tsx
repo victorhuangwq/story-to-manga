@@ -1,4 +1,5 @@
 import DownloadButton from "./DownloadButton";
+import SpeechBubble from "./SpeechBubble";
 
 interface PanelCardProps {
 	panel: {
@@ -58,9 +59,9 @@ export default function PanelCard({
 					<h6 className="card-title">Panel {panel.panelNumber}</h6>
 					<p className="card-text text-sm">{panel.sceneDescription}</p>
 					{panel.dialogue && (
-						<p className="card-text speech-bubble text-sm">
-							"{panel.dialogue}"
-						</p>
+						<div className="flex justify-center my-3">
+							<SpeechBubble text={panel.dialogue} />
+						</div>
 					)}
 					<div className="text-sm text-manga-medium-gray">
 						{panel.characters && (

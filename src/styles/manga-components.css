@@ -17,7 +17,6 @@
   border-radius: var(--radius-manga-minimal);
   box-shadow: var(--shadow-manga-subtle);
   position: relative;
-  overflow: hidden;
 }
 
 /* Button Styles - Manga */
@@ -199,6 +198,7 @@ input[type="radio"]:checked + .btn-manga-outline {
   background: white;
   color: var(--color-manga-charcoal);
   padding: 1rem;
+  overflow: visible;
 }
 
 .card-manga .card-title {
@@ -326,16 +326,6 @@ input[type="radio"]:checked + .btn-manga-outline {
   color: var(--color-manga-charcoal);
   border-top: 1px solid var(--color-manga-gray);
   padding: 1.25rem;
-}
-
-/* Speech Bubble */
-.speech-bubble {
-  position: relative;
-  background: white;
-  border: 2px solid var(--color-manga-black);
-  border-radius: 1.25rem;
-  padding: 1rem;
-  margin: 1rem 0;
 }
 
 /* Badge Styles */
