@@ -1,20 +1,3 @@
-interface RedditPost {
-	title: string;
-	selftext: string;
-	author: string;
-	subreddit: string;
-	url: string;
-	permalink: string;
-}
-
-interface RedditApiResponse {
-	data: {
-		children: Array<{
-			data: RedditPost;
-		}>;
-	};
-}
-
 interface RedditPostContent {
 	title: string;
 	body: string;
@@ -36,23 +19,22 @@ export class RedditApiError extends Error {
 export async function fetchRedditPost(
 	redditPath: string,
 ): Promise<RedditPostContent> {
-	// Extract subreddit and post ID from path like /r/subreddit/comments/postid/title
+	// Validate Reddit path format
 	const pathMatch = redditPath.match(/^\/r\/([^/]+)\/comments\/([^/]+)/);
 	if (!pathMatch) {
 		throw new RedditApiError("Invalid Reddit URL format");
 	}
 
-	const [, subreddit, postId] = pathMatch;
-	const apiUrl = `https://www.reddit.com/r/${subreddit}/comments/${postId}.json`;
-
 	try {
-		const response = await fetch(apiUrl, {
-			headers: {
-				"User-Agent": "story-to-manga/1.0",
-			},
-		});
+		// Use our proxy API endpoint instead of direct Reddit API call
+		const response = await fetch(
+			`/api/reddit?path=${encodeURIComponent(redditPath)}`,
+		);
 
 		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: "Unknown error" }));
 			if (response.status === 404) {
 				throw new RedditApiError("Reddit post not found", 404);
 			}
@@ -60,29 +42,18 @@ export async function fetchRedditPost(
 				throw new RedditApiError("Reddit post is private or restricted", 403);
 			}
 			throw new RedditApiError(
-				`Failed to fetch Reddit post: ${response.status}`,
+				errorData.error || `Failed to fetch Reddit post: ${response.status}`,
 				response.status,
 			);
 		}
 
-		const data: RedditApiResponse[] = await response.json();
+		const responseData = await response.json();
 
-		if (!data || !Array.isArray(data) || data.length === 0) {
-			throw new RedditApiError("Invalid Reddit API response format");
+		if (!responseData.success || !responseData.post) {
+			throw new RedditApiError("Invalid API response format");
 		}
 
-		const postData = data[0]?.data?.children?.[0]?.data;
-		if (!postData) {
-			throw new RedditApiError("No post data found in Reddit response");
-		}
-
-		return {
-			title: postData.title || "",
-			body: postData.selftext || "",
-			author: postData.author || "",
-			subreddit: postData.subreddit || "",
-			url: `https://www.reddit.com${postData.permalink}`,
-		};
+		return responseData.post;
 	} catch (error) {
 		if (error instanceof RedditApiError) {
 			throw error;

@@ -21,12 +21,13 @@
 		"pino": "9.9.5",
 		"pino-pretty": "13.1.1",
 		"react": "19.1.1",
-		"react-dom": "19.1.1"
+		"react-dom": "19.1.1",
+		"zustand": "5.0.8"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.4",
 		"@tailwindcss/postcss": "4.1.13",
-		"@types/node": "24.4.0",
+		"@types/node": "24.5.0",
 		"@types/react": "19.1.13",
 		"@types/react-dom": "19.1.9",
 		"knip": "5.63.1",
