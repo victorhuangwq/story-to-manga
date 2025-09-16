@@ -17,6 +17,7 @@ interface UseRedditIntegrationProps {
 	setIsLoadingReddit: (loading: boolean) => void;
 	setCurrentStepText: (text: string) => void;
 	setStory: (story: string) => void;
+	showError: (message: string) => void;
 	style: ComicStyle;
 	uploadedCharacterReferences: UploadedCharacterReference[];
 	uploadedSettingReferences: UploadedSettingReference[];
@@ -35,6 +36,7 @@ export function useRedditIntegration(props: UseRedditIntegrationProps) {
 		setIsLoadingReddit,
 		setCurrentStepText,
 		setStory,
+		showError,
 		style,
 		uploadedCharacterReferences,
 		uploadedSettingReferences,
@@ -82,16 +84,13 @@ export function useRedditIntegration(props: UseRedditIntegrationProps) {
 					errorMessage = error.message;
 				}
 
-				// Show error in the current step text
-				setCurrentStepText(`Error: ${errorMessage}`);
+				// Show error in a modal
+				showError(errorMessage);
 
 				trackError("reddit_loading", errorMessage);
 
-				// Clear error after a few seconds
-				setTimeout(() => {
-					setCurrentStepText("");
-					setIsLoadingReddit(false);
-				}, 3000);
+				setIsLoadingReddit(false);
+				setCurrentStepText("");
 
 				return;
 			}
@@ -107,6 +106,7 @@ export function useRedditIntegration(props: UseRedditIntegrationProps) {
 		setIsLoadingReddit,
 		setCurrentStepText,
 		setStory,
+		showError,
 		style,
 		uploadedCharacterReferences,
 		uploadedSettingReferences,

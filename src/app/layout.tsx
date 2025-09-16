@@ -7,12 +7,10 @@ import "./globals.css";
 export const metadata: Metadata = {
 	metadataBase: new URL("https://storytomanga.com"),
 	title: "Story to Manga Machine",
-	description:
-			"Transform stories into manga and comic pages with IA",
+	description: "Transform stories into manga and comic pages with AI",
 	openGraph: {
 		title: "Story to Manga",
-		description:
-			"Transform stories into manga and comic pages with IA",
+		description: "Transform stories into manga and comic pages with AI",
 		url: "https://storytomanga.com",
 		images: [
 			{
@@ -27,8 +25,7 @@ export const metadata: Metadata = {
 	twitter: {
 		card: "summary_large_image",
 		title: "Story to Manga",
-		description:
-			"Transform stories into manga and comic pages with IA",
+		description: "Transform stories into manga and comic pages with AI",
 		images: ["/og-image.png"],
 	},
 };
