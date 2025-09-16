@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
+import { getGoogleAiApiKey } from "@/lib/api-keys";
+import { callGeminiWithRetry } from "@/lib/gemini-helper";
 import { parseGeminiJSON } from "@/lib/json-parser";
 import {
 	logApiRequest,
@@ -21,7 +23,7 @@ interface StoryBreakdown {
 	panels: Panel[];
 }
 
-const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(true) });
 const model = "gemini-2.5-flash";
 
 export async function POST(request: NextRequest) {
@@ -121,76 +123,94 @@ For each panel, describe:
 Return as a flat array of panels with sequential panel numbers.
 `;
 
-		storyChunkingLogger.info(
-			{
-				model: model,
-				prompt_length: prompt.length,
-				layout_guidance_type: style,
-			},
-			"Calling Gemini API for story chunking",
-		);
-
-		const result = await genAI.models.generateContent({
-			model: model,
-			contents: prompt,
-			config: {
-				thinkingConfig: {
-					thinkingBudget: 8192, // Give model time to think through panel layout
-				},
-				responseMimeType: "application/json",
-				responseSchema: {
-					type: Type.OBJECT,
-					properties: {
-						panels: {
-							type: Type.ARRAY,
-							items: {
+		let text: string;
+		try {
+			text = await callGeminiWithRetry(
+				async () => {
+					const result = await genAI.models.generateContent({
+						model: model,
+						contents: prompt,
+						config: {
+							thinkingConfig: {
+								thinkingBudget: 8192, // Give model time to think through panel layout
+							},
+							responseMimeType: "application/json",
+							responseSchema: {
 								type: Type.OBJECT,
 								properties: {
-									panelNumber: {
-										type: Type.NUMBER,
-									},
-									characters: {
+									panels: {
 										type: Type.ARRAY,
 										items: {
-											type: Type.STRING,
+											type: Type.OBJECT,
+											properties: {
+												panelNumber: {
+													type: Type.NUMBER,
+												},
+												characters: {
+													type: Type.ARRAY,
+													items: {
+														type: Type.STRING,
+													},
+												},
+												sceneDescription: {
+													type: Type.STRING,
+												},
+												dialogue: {
+													type: Type.STRING,
+												},
+												cameraAngle: {
+													type: Type.STRING,
+												},
+												visualMood: {
+													type: Type.STRING,
+												},
+											},
+											propertyOrdering: [
+												"panelNumber",
+												"characters",
+												"sceneDescription",
+												"dialogue",
+												"cameraAngle",
+												"visualMood",
+											],
 										},
 									},
-									sceneDescription: {
-										type: Type.STRING,
-									},
-									dialogue: {
-										type: Type.STRING,
-									},
-									cameraAngle: {
-										type: Type.STRING,
-									},
-									visualMood: {
-										type: Type.STRING,
-									},
 								},
-								propertyOrdering: [
-									"panelNumber",
-									"characters",
-									"sceneDescription",
-									"dialogue",
-									"cameraAngle",
-									"visualMood",
-								],
+								propertyOrdering: ["panels"],
 							},
 						},
-					},
-					propertyOrdering: ["panels"],
-				},
-			},
-		});
-		const text = result.text || "";
+					});
 
-		storyChunkingLogger.debug(
-			{
-				response_length: text.length,
-			},
-			"Received response from Gemini API",
-		);
+					storyChunkingLogger.debug(
+						{
+							response_length: result.text?.length || 0,
+						},
+						"Received response from Gemini API",
+					);
+
+					return result.text || "";
+				},
+				storyChunkingLogger,
+				{
+					model: model,
+					prompt_length: prompt.length,
+					layout_guidance_type: style,
+				},
+			);
+		} catch (error) {
+			logError(storyChunkingLogger, error, "story chunking");
+			logApiResponse(
+				storyChunkingLogger,
+				endpoint,
+				false,
+				Date.now() - startTime,
+				{ error: "Gemini API call failed" },
+			);
+			return NextResponse.json(
+				{ error: "Failed to chunk story" },
+				{ status: 500 },
+			);
+		}
 
 		// Parse JSON response
 		let storyBreakdown: StoryBreakdown;

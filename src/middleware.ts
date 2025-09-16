@@ -31,6 +31,21 @@ function getEndpointName(pathname: string): string {
 }
 
 export function middleware(request: NextRequest) {
+	const url = request.nextUrl.clone();
+	const hostname = request.headers.get("host") || "";
+	const pathname = url.pathname;
+
+	// Check if path matches Reddit URL pattern: /r/subreddit/comments/postid/...
+	const isRedditPath = /^\/r\/[^/]+\/comments\/[^/]+/.test(pathname);
+
+	// Handle Reddit URLs - either from reddit subdomain or Reddit path pattern
+	if (hostname.startsWith("reddit.") || isRedditPath) {
+		// Redirect to main page with reddit path as query param
+		url.pathname = "/";
+		url.searchParams.set("reddit", pathname);
+		return NextResponse.redirect(url);
+	}
+
 	// Only apply rate limiting to API routes
 	if (!request.nextUrl.pathname.startsWith("/api/")) {
 		return NextResponse.next();

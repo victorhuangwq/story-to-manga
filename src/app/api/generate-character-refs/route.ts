@@ -1,5 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
+import { getGoogleAiApiKey } from "@/lib/api-keys";
+import { callGeminiWithRetry } from "@/lib/gemini-helper";
 import {
 	characterGenLogger,
 	logApiRequest,
@@ -7,7 +9,7 @@ import {
 	logError,
 } from "@/lib/logger";
 
-const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(false) });
 const model = "gemini-2.5-flash-image-preview";
 
 // Helper function to convert base64 to format expected by Gemini
@@ -68,7 +70,11 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const characterReferences = [];
+		const characterReferences: Array<{
+			name: string;
+			image: string;
+			description: string;
+		}> = [];
 
 		characterGenLogger.info(
 			{
@@ -142,7 +148,78 @@ The character should be drawn in a neutral pose against a plain background, show
 			}
 
 			try {
-				characterGenLogger.debug(
+				await callGeminiWithRetry(
+					async () => {
+						const result = await genAI.models.generateContent({
+							model: model,
+							contents: inputParts,
+						});
+
+						// Process the response following the official pattern
+						const candidate = result.candidates?.[0];
+
+						// Check for prohibited content finish reason
+						if (candidate?.finishReason === "PROHIBITED_CONTENT") {
+							characterGenLogger.warn(
+								{
+									character_name: character.name,
+									finish_reason: candidate.finishReason,
+								},
+								"Content blocked by safety filters",
+							);
+							throw new Error(
+								"PROHIBITED_CONTENT: Your content was blocked by Gemini safety filters.",
+								{ cause: result },
+							);
+						}
+
+						if (!candidate?.content?.parts) {
+							throw new Error("No content parts received", { cause: result });
+						}
+
+						let imageFound = false;
+						for (const part of candidate.content.parts) {
+							if (part.text) {
+								characterGenLogger.info(
+									{
+										character_name: character.name,
+										text_response: part.text,
+										text_length: part.text.length,
+									},
+									"Received text response from model (full content)",
+								);
+							} else if (part.inlineData) {
+								const imageData = part.inlineData.data;
+								const mimeType = part.inlineData.mimeType || "image/jpeg";
+
+								characterReferences.push({
+									name: character.name,
+									image: `data:${mimeType};base64,${imageData}`,
+									description: character.physicalDescription,
+								});
+
+								characterGenLogger.info(
+									{
+										character_name: character.name,
+										mime_type: mimeType,
+										image_size_kb: imageData
+											? Math.round((imageData.length * 0.75) / 1024)
+											: 0,
+										duration_ms: Date.now() - characterStartTime,
+									},
+									"Successfully generated character reference",
+								);
+
+								imageFound = true;
+								break;
+							}
+						}
+
+						if (!imageFound) {
+							throw new Error("No image data received in response parts");
+						}
+					},
+					characterGenLogger,
 					{
 						character_name: character.name,
 						prompt_length: prompt.length,
@@ -151,61 +228,7 @@ The character should be drawn in a neutral pose against a plain background, show
 						total_uploads: uploadedCharacterReferences.length,
 						input_parts_count: inputParts.length,
 					},
-					"Calling Gemini API for character generation",
 				);
-
-				const result = await genAI.models.generateContent({
-					model: model,
-					contents: inputParts,
-				});
-
-				// Process the response following the official pattern
-				const candidate = result.candidates?.[0];
-				if (!candidate?.content?.parts) {
-					throw new Error("No content parts received");
-				}
-
-				let imageFound = false;
-				for (const part of candidate.content.parts) {
-					if (part.text) {
-						characterGenLogger.info(
-							{
-								character_name: character.name,
-								text_response: part.text,
-								text_length: part.text.length,
-							},
-							"Received text response from model (full content)",
-						);
-					} else if (part.inlineData) {
-						const imageData = part.inlineData.data;
-						const mimeType = part.inlineData.mimeType || "image/jpeg";
-
-						characterReferences.push({
-							name: character.name,
-							image: `data:${mimeType};base64,${imageData}`,
-							description: character.physicalDescription,
-						});
-
-						characterGenLogger.info(
-							{
-								character_name: character.name,
-								mime_type: mimeType,
-								image_size_kb: imageData
-									? Math.round((imageData.length * 0.75) / 1024)
-									: 0,
-								duration_ms: Date.now() - characterStartTime,
-							},
-							"Successfully generated character reference",
-						);
-
-						imageFound = true;
-						break;
-					}
-				}
-
-				if (!imageFound) {
-					throw new Error("No image data received in response parts");
-				}
 			} catch (error) {
 				logError(characterGenLogger, error, "character reference generation", {
 					character_name: character.name,
