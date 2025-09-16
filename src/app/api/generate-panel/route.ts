@@ -1,5 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
+import { getGoogleAiApiKey } from "@/lib/api-keys";
+import { callGeminiWithRetry } from "@/lib/gemini-helper";
 import {
 	logApiRequest,
 	logApiResponse,
@@ -7,7 +9,7 @@ import {
 	panelLogger,
 } from "@/lib/logger";
 
-const genAI = new GoogleGenAI({ apiKey: process.env["GOOGLE_AI_API_KEY"]! });
+const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(false) });
 const model = "gemini-2.5-flash-image-preview";
 
 // Helper function to convert base64 to format expected by Gemini
@@ -155,141 +157,104 @@ Generate a single comic panel image with proper framing and composition.
 			"Calling Gemini API for panel generation",
 		);
 
-		// Helper function to attempt generation with retry logic
-		const attemptGeneration = async (attemptNumber: number) => {
-			const result = await genAI.models.generateContent({
-				model: model,
-				contents: inputParts,
-			});
-
-			panelLogger.debug(
-				{
-					panel_number: panel.panelNumber,
-					attempt: attemptNumber,
-				},
-				"Received response from Gemini API",
-			);
-
-			// Process the response following the official pattern
-			const candidate = result.candidates?.[0];
-
-			// Check for prohibited content finish reason
-			if (candidate?.finishReason === "PROHIBITED_CONTENT") {
-				panelLogger.warn(
-					{
-						panel_number: panel.panelNumber,
-						finish_reason: candidate.finishReason,
-						attempt: attemptNumber,
-					},
-					"Content blocked by safety filters",
-				);
-				throw new Error(
-					"PROHIBITED_CONTENT: Your content was blocked by Gemini safety filters.",
-					{ cause: result },
-				);
-			}
-
-			if (!candidate?.content?.parts) {
-				throw new Error("No content parts received", { cause: result });
-			}
-
-			for (const part of candidate.content.parts) {
-				if (part.text) {
-					panelLogger.info(
-						{
-							panel_number: panel.panelNumber,
-							text_response: part.text,
-							text_length: part.text.length,
-							attempt: attemptNumber,
-						},
-						"Received text response from model (full content)",
-					);
-				} else if (part.inlineData) {
-					const imageData = part.inlineData.data;
-					const mimeType = part.inlineData.mimeType || "image/jpeg";
-
-					panelLogger.info(
-						{
-							panel_number: panel.panelNumber,
-							mime_type: mimeType,
-							image_size_kb: imageData
-								? Math.round((imageData.length * 0.75) / 1024)
-								: 0,
-							duration_ms: Date.now() - startTime,
-							attempt: attemptNumber,
-						},
-						"Successfully generated panel",
-					);
-
-					logApiResponse(panelLogger, endpoint, true, Date.now() - startTime, {
-						panel_number: panel.panelNumber,
-						image_size_kb: imageData
-							? Math.round((imageData.length * 0.75) / 1024)
-							: 0,
-						attempt: attemptNumber,
-					});
-
-					return NextResponse.json({
-						success: true,
-						generatedPanel: {
-							panelNumber: panel.panelNumber,
-							image: `data:${mimeType};base64,${imageData}`,
-						},
-					});
-				}
-			}
-
-			throw new Error("No image data received in response parts");
-		};
-
 		try {
-			// Try generation with single retry for transient failures
-			try {
-				return await attemptGeneration(1);
-			} catch (error) {
-				const shouldRetry =
-					error instanceof Error &&
-					!error.message.startsWith("PROHIBITED_CONTENT:") &&
-					(error.message === "No content parts received" ||
-						error.message.includes("fetch failed") ||
-						error.message.includes("network error") ||
-						error.message.includes("timeout"));
+			const generatedPanel = await callGeminiWithRetry(
+				async () => {
+					const result = await genAI.models.generateContent({
+						model: model,
+						contents: inputParts,
+					});
 
-				if (shouldRetry) {
-					panelLogger.warn(
+					panelLogger.debug(
 						{
 							panel_number: panel.panelNumber,
-							error_message: error.message,
-							error_cause: error.cause,
-							duration_ms: Date.now() - startTime,
 						},
-						"First attempt failed with transient error, retrying once",
+						"Received response from Gemini API",
 					);
 
-					// Wait 1.5 seconds before retry
-					await new Promise((resolve) => setTimeout(resolve, 1500));
+					// Process the response following the official pattern
+					const candidate = result.candidates?.[0];
 
-					try {
-						return await attemptGeneration(2);
-					} catch (retryError) {
-						panelLogger.error(
+					// Check for prohibited content finish reason
+					if (candidate?.finishReason === "PROHIBITED_CONTENT") {
+						panelLogger.warn(
 							{
 								panel_number: panel.panelNumber,
-								original_error: error.message,
-								retry_error:
-									retryError instanceof Error
-										? retryError.message
-										: "Unknown error",
-								duration_ms: Date.now() - startTime,
+								finish_reason: candidate.finishReason,
 							},
-							"Retry also failed, giving up",
+							"Content blocked by safety filters",
 						);
-						throw retryError;
+						throw new Error(
+							"PROHIBITED_CONTENT: Your content was blocked by Gemini safety filters.",
+							{ cause: result },
+						);
 					}
-				}
-				// Re-throw error for the outer catch block to handle
-				throw error;
-			}
+
+					if (!candidate?.content?.parts) {
+						throw new Error("No content parts received", { cause: result });
+					}
+
+					for (const part of candidate.content.parts) {
+						if (part.text) {
+							panelLogger.info(
+								{
+									panel_number: panel.panelNumber,
+									text_response: part.text,
+									text_length: part.text.length,
+								},
+								"Received text response from model (full content)",
+							);
+						} else if (part.inlineData) {
+							const imageData = part.inlineData.data;
+							const mimeType = part.inlineData.mimeType || "image/jpeg";
+
+							panelLogger.info(
+								{
+									panel_number: panel.panelNumber,
+									mime_type: mimeType,
+									image_size_kb: imageData
+										? Math.round((imageData.length * 0.75) / 1024)
+										: 0,
+									duration_ms: Date.now() - startTime,
+								},
+								"Successfully generated panel",
+							);
+
+							return {
+								panelNumber: panel.panelNumber,
+								image: `data:${mimeType};base64,${imageData}`,
+								imageData, // For logging
+								mimeType, // For logging
+							};
+						}
+					}
+
+					throw new Error("No image data received in response parts");
+				},
+				panelLogger,
+				{
+					panel_number: panel.panelNumber,
+					prompt_length: prompt.length,
+					character_refs_attached: characterReferences.length,
+					uploaded_setting_refs_attached: uploadedSettingReferences.length,
+					input_parts_count: inputParts.length,
+				},
+			);
+
+			logApiResponse(panelLogger, endpoint, true, Date.now() - startTime, {
+				panel_number: generatedPanel.panelNumber,
+				image_size_kb: generatedPanel.imageData
+					? Math.round((generatedPanel.imageData.length * 0.75) / 1024)
+					: 0,
+			});
+
+			return NextResponse.json({
+				success: true,
+				generatedPanel: {
+					panelNumber: generatedPanel.panelNumber,
+					image: generatedPanel.image,
+				},
+			});
 		} catch (error) {
 			logError(panelLogger, error, "panel generation", {
 				panel_number: panel.panelNumber,

@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
+import { getGoogleAiApiKey } from "@/lib/api-keys";
+import { callGeminiWithRetry } from "@/lib/gemini-helper";
 import { parseGeminiJSON } from "@/lib/json-parser";
 import {
 	logApiRequest,
@@ -26,11 +28,7 @@ interface AnalysisData {
 	setting: Setting;
 }
 
-const apiKey = process.env["GOOGLE_AI_API_KEY"];
-if (!apiKey) {
-	console.error("GOOGLE_AI_API_KEY environment variable is not set");
-}
-const genAI = new GoogleGenAI({ apiKey: apiKey! });
+const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(true) });
 const model = "gemini-2.5-flash";
 
 export async function POST(request: NextRequest) {
@@ -109,79 +107,97 @@ Please provide:
 3. Setting description (time period, location, mood)
 `;
 
-		storyAnalysisLogger.info(
-			{
-				model: model,
-				prompt_length: prompt.length,
-			},
-			"Calling Gemini API for story analysis",
-		);
-
-		const result = await genAI.models.generateContent({
-			model: model,
-			contents: prompt,
-			config: {
-				responseMimeType: "application/json",
-				responseSchema: {
-					type: Type.OBJECT,
-					properties: {
-						title: {
-							type: Type.STRING,
-						},
-						characters: {
-							type: Type.ARRAY,
-							items: {
+		let text: string;
+		try {
+			text = await callGeminiWithRetry(
+				async () => {
+					const result = await genAI.models.generateContent({
+						model: model,
+						contents: prompt,
+						config: {
+							responseMimeType: "application/json",
+							responseSchema: {
 								type: Type.OBJECT,
 								properties: {
-									name: {
+									title: {
 										type: Type.STRING,
 									},
-									physicalDescription: {
-										type: Type.STRING,
+									characters: {
+										type: Type.ARRAY,
+										items: {
+											type: Type.OBJECT,
+											properties: {
+												name: {
+													type: Type.STRING,
+												},
+												physicalDescription: {
+													type: Type.STRING,
+												},
+												personality: {
+													type: Type.STRING,
+												},
+												role: {
+													type: Type.STRING,
+												},
+											},
+											propertyOrdering: [
+												"name",
+												"physicalDescription",
+												"personality",
+												"role",
+											],
+										},
 									},
-									personality: {
-										type: Type.STRING,
-									},
-									role: {
-										type: Type.STRING,
+									setting: {
+										type: Type.OBJECT,
+										properties: {
+											timePeriod: {
+												type: Type.STRING,
+											},
+											location: {
+												type: Type.STRING,
+											},
+											mood: {
+												type: Type.STRING,
+											},
+										},
+										propertyOrdering: ["timePeriod", "location", "mood"],
 									},
 								},
-								propertyOrdering: [
-									"name",
-									"physicalDescription",
-									"personality",
-									"role",
-								],
+								propertyOrdering: ["title", "characters", "setting"],
 							},
 						},
-						setting: {
-							type: Type.OBJECT,
-							properties: {
-								timePeriod: {
-									type: Type.STRING,
-								},
-								location: {
-									type: Type.STRING,
-								},
-								mood: {
-									type: Type.STRING,
-								},
-							},
-							propertyOrdering: ["timePeriod", "location", "mood"],
-						},
-					},
-					propertyOrdering: ["title", "characters", "setting"],
-				},
-			},
-		});
-		const text = result.text || "";
+					});
 
-		storyAnalysisLogger.debug(
-			{
-				response_length: text.length,
-			},
-			"Received response from Gemini API",
-		);
+					storyAnalysisLogger.debug(
+						{
+							response_length: result.text?.length || 0,
+						},
+						"Received response from Gemini API",
+					);
+
+					return result.text || "";
+				},
+				storyAnalysisLogger,
+				{
+					model: model,
+					prompt_length: prompt.length,
+				},
+			);
+		} catch (error) {
+			logError(storyAnalysisLogger, error, "story analysis");
+			logApiResponse(
+				storyAnalysisLogger,
+				endpoint,
+				false,
+				Date.now() - startTime,
+				{ error: "Gemini API call failed" },
+			);
+			return NextResponse.json(
+				{ error: "Failed to analyze story" },
+				{ status: 500 },
+			);
+		}
 
 		// Parse JSON response
 		let analysisData: AnalysisData;

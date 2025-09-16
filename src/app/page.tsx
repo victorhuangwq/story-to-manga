@@ -12,6 +12,11 @@ import {
 	trackPerformance,
 } from "@/lib/analytics";
 import {
+	fetchRedditPost,
+	formatRedditStory,
+	RedditApiError,
+} from "@/lib/reddit-client";
+import {
 	clearAllData,
 	getStorageInfo,
 	loadState,
@@ -723,39 +728,41 @@ export default function Home() {
 	const compositorRef = useRef<HTMLDivElement>(null);
 
 	// Simple rate limit error handler
-	const handleApiError = async (
-		response: Response,
-		defaultMessage: string,
-	): Promise<string> => {
-		if (response.status === 429) {
-			try {
-				const data = await response.json();
-				const retryAfter = data.retryAfter || 60;
-				return `Rate limit exceeded. Please wait ${retryAfter} seconds and try again.`;
-			} catch {
-				return "Rate limit exceeded. Please wait a minute and try again.";
-			}
-		}
-
-		if (response.status === 400) {
-			try {
-				const data = await response.json();
-				if (data.errorType === "PROHIBITED_CONTENT") {
-					return `⚠️ Content Safety Issue: ${data.error}\n\nTip: Try modifying your story to remove potentially inappropriate content, violence, or mature themes.`;
+	const handleApiError = useCallback(
+		async (response: Response, defaultMessage: string): Promise<string> => {
+			if (response.status === 429) {
+				try {
+					const data = await response.json();
+					const retryAfter = data.retryAfter || 60;
+					return `Rate limit exceeded. Please wait ${retryAfter} seconds and try again.`;
+				} catch {
+					return "Rate limit exceeded. Please wait a minute and try again.";
 				}
-				return data.error || defaultMessage;
-			} catch {
-				return defaultMessage;
 			}
-		}
 
-		return defaultMessage;
-	};
+			if (response.status === 400) {
+				try {
+					const data = await response.json();
+					if (data.errorType === "PROHIBITED_CONTENT") {
+						return `⚠️ Content Safety Issue: ${data.error}\n\nTip: Try modifying your story to remove potentially inappropriate content, violence, or mature themes.`;
+					}
+					return data.error || defaultMessage;
+				} catch {
+					return defaultMessage;
+				}
+			}
+
+			return defaultMessage;
+		},
+		[],
+	);
 
 	// Main state
 	const [story, setStory] = useState("");
 	const [style, setStyle] = useState<ComicStyle>("manga");
 	const [isGenerating, setIsGenerating] = useState(false);
+	const [isLoadingReddit, setIsLoadingReddit] = useState(false);
+	const [hasLoadedReddit, setHasLoadedReddit] = useState(false);
 	const [currentStepText, setCurrentStepText] = useState("");
 
 	// Uploaded reference images state
@@ -866,180 +873,6 @@ export default function Home() {
 			action: "load_sample_story",
 			category: "user_interaction",
 		});
-	};
-
-	const generateComic = async () => {
-		if (!story.trim()) {
-			showError("Please enter a story");
-			return;
-		}
-
-		if (wordCount > 500) {
-			showError("Story must be 500 words or less");
-			return;
-		}
-
-		// Track generation start
-		const generationStartTime = Date.now();
-		trackEvent({
-			action: "start_generation",
-			category: "manga_generation",
-			label: style,
-			value: wordCount,
-		});
-
-		// Only reset error and set generating state - keep existing content visible
-		setIsGenerating(true);
-		setCurrentStepText("Analyzing your story...");
-		setError(null);
-
-		try {
-			// Step 1: Analyze story
-			const analysisResponse = await fetch("/api/analyze-story", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ story, style }),
-			});
-
-			if (!analysisResponse.ok) {
-				throw new Error(
-					await handleApiError(analysisResponse, "Failed to analyze story"),
-				);
-			}
-
-			const { analysis } = await analysisResponse.json();
-			setStoryAnalysis(analysis);
-			setOpenAccordions(new Set(["analysis"])); // Auto-expand analysis section
-
-			// Step 2: Generate character references
-			setCurrentStepText("Creating character designs...");
-			const charRefResponse = await fetch("/api/generate-character-refs", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					characters: analysis.characters,
-					setting: analysis.setting,
-					style,
-					uploadedCharacterReferences,
-				}),
-			});
-
-			if (!charRefResponse.ok) {
-				throw new Error(
-					await handleApiError(
-						charRefResponse,
-						"Failed to generate character references",
-					),
-				);
-			}
-
-			const { characterReferences } = await charRefResponse.json();
-			setCharacterReferences(characterReferences);
-			setOpenAccordions(new Set(["characters"])); // Auto-expand characters section
-
-			// Step 3: Break down story into panels
-			setCurrentStepText("Planning comic layout...");
-			const storyBreakdownResponse = await fetch("/api/chunk-story", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					story,
-					characters: analysis.characters,
-					setting: analysis.setting,
-					style,
-				}),
-			});
-
-			if (!storyBreakdownResponse.ok) {
-				throw new Error(
-					await handleApiError(
-						storyBreakdownResponse,
-						"Failed to break down story",
-					),
-				);
-			}
-
-			const { storyBreakdown: breakdown } = await storyBreakdownResponse.json();
-			setStoryBreakdown(breakdown);
-			setOpenAccordions(new Set(["layout"])); // Auto-expand layout section
-
-			// Step 4: Generate comic panels
-			const panels: GeneratedPanel[] = [];
-
-			for (let i = 0; i < breakdown.panels.length; i++) {
-				const panel = breakdown.panels[i];
-				setCurrentStepText(
-					`Generating panel ${i + 1}/${breakdown.panels.length}...`,
-				);
-
-				const panelResponse = await fetch("/api/generate-panel", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						panel,
-						characterReferences,
-						setting: analysis.setting,
-						style,
-						uploadedSettingReferences,
-					}),
-				});
-
-				if (!panelResponse.ok) {
-					const errorMessage = await handleApiError(
-						panelResponse,
-						`Failed to generate panel ${i + 1}`,
-					);
-					trackError(
-						"panel_generation_failed",
-						`Panel ${i + 1}: ${errorMessage}`,
-					);
-					// Store which panel failed
-					setFailedPanel({ step: "panel", panelNumber: i + 1 });
-					throw new Error(errorMessage);
-				}
-
-				const { generatedPanel } = await panelResponse.json();
-				panels.push(generatedPanel);
-				setGeneratedPanels([...panels]);
-
-				// Auto-expand panels section after first panel is generated
-				if (i === 0) {
-					setOpenAccordions(new Set(["panels"]));
-					// Track time to first panel
-					const timeToFirstPanel = Date.now() - generationStartTime;
-					trackPerformance("time_to_first_panel", timeToFirstPanel);
-				}
-			}
-
-			setCurrentStepText("Complete! 🎉");
-			setIsGenerating(false);
-
-			// Track successful generation
-			const generationTime = Date.now() - generationStartTime;
-			trackMangaGeneration(wordCount, panels.length);
-			trackPerformance("total_generation_time", generationTime);
-		} catch (error) {
-			console.error("Generation error:", error);
-			const errorMessage =
-				error instanceof Error ? error.message : "Generation failed";
-			showError(errorMessage);
-			setIsGenerating(false);
-
-			// Track error
-			trackError("generation_failed", errorMessage);
-
-			// Determine which step failed based on current progress
-			if (!storyAnalysis) {
-				setFailedStep("analysis");
-			} else if (characterReferences.length === 0) {
-				setFailedStep("characters");
-			} else if (!storyBreakdown) {
-				setFailedStep("layout");
-			} else {
-				setFailedStep("panels");
-				// Note: failedPanel is already set in the panel generation loop
-			}
-		}
 	};
 
 	const downloadImage = (imageUrl: string, filename: string) => {
@@ -1202,6 +1035,206 @@ export default function Home() {
 		setShowErrorModal(true);
 	}, []);
 
+	const clearResults = useCallback(() => {
+		setStoryAnalysis(null);
+		setCharacterReferences([]);
+		setStoryBreakdown(null);
+		setGeneratedPanels([]);
+		setError(null);
+		setFailedStep(null);
+		setFailedPanel(null);
+		setUploadedCharacterReferences([]);
+		setUploadedSettingReferences([]);
+	}, []);
+
+	const generateComic = useCallback(
+		async (storyText: string) => {
+			if (!storyText.trim()) {
+				showError("Please enter a story");
+				return;
+			}
+
+			const storyWordCount = storyText
+				.split(/\s+/)
+				.filter((word) => word.length > 0).length;
+			if (storyWordCount > 500) {
+				showError("Story must be 500 words or less");
+				return;
+			}
+
+			// Clear previous results before starting new generation
+			clearResults();
+
+			// Track generation progress
+			let currentStep: FailedStep = null;
+
+			// Track generation start
+			const generationStartTime = Date.now();
+			trackEvent({
+				action: "start_generation",
+				category: "manga_generation",
+				label: style,
+				value: storyWordCount,
+			});
+
+			// Set generating state and start step
+			setIsGenerating(true);
+			setCurrentStepText("Analyzing your story...");
+
+			try {
+				// Step 1: Analyze story
+				currentStep = "analysis";
+				const analysisResponse = await fetch("/api/analyze-story", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ story: storyText, style }),
+				});
+
+				if (!analysisResponse.ok) {
+					throw new Error(
+						await handleApiError(analysisResponse, "Failed to analyze story"),
+					);
+				}
+
+				const { analysis } = await analysisResponse.json();
+				setStoryAnalysis(analysis);
+				setOpenAccordions(new Set(["analysis"])); // Auto-expand analysis section
+
+				// Step 2: Generate character references
+				currentStep = "characters";
+				setCurrentStepText("Creating character designs...");
+				const charRefResponse = await fetch("/api/generate-character-refs", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						characters: analysis.characters,
+						setting: analysis.setting,
+						style,
+						uploadedCharacterReferences,
+					}),
+				});
+
+				if (!charRefResponse.ok) {
+					throw new Error(
+						await handleApiError(
+							charRefResponse,
+							"Failed to generate character references",
+						),
+					);
+				}
+
+				const { characterReferences } = await charRefResponse.json();
+				setCharacterReferences(characterReferences);
+				setOpenAccordions(new Set(["characters"])); // Auto-expand characters section
+
+				// Step 3: Break down story into panels
+				currentStep = "layout";
+				setCurrentStepText("Planning comic layout...");
+				const storyBreakdownResponse = await fetch("/api/chunk-story", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						story: storyText,
+						characters: analysis.characters,
+						setting: analysis.setting,
+						style,
+					}),
+				});
+
+				if (!storyBreakdownResponse.ok) {
+					throw new Error(
+						await handleApiError(
+							storyBreakdownResponse,
+							"Failed to break down story",
+						),
+					);
+				}
+
+				const { storyBreakdown: breakdown } =
+					await storyBreakdownResponse.json();
+				setStoryBreakdown(breakdown);
+				setOpenAccordions(new Set(["layout"])); // Auto-expand layout section
+
+				// Step 4: Generate comic panels
+				currentStep = "panels";
+				const panels: GeneratedPanel[] = [];
+
+				for (let i = 0; i < breakdown.panels.length; i++) {
+					const panel = breakdown.panels[i];
+					setCurrentStepText(
+						`Generating panel ${i + 1}/${breakdown.panels.length}...`,
+					);
+
+					const panelResponse = await fetch("/api/generate-panel", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							panel,
+							characterReferences,
+							setting: analysis.setting,
+							style,
+							uploadedSettingReferences,
+						}),
+					});
+
+					if (!panelResponse.ok) {
+						const errorMessage = await handleApiError(
+							panelResponse,
+							`Failed to generate panel ${i + 1}`,
+						);
+						trackError(
+							"panel_generation_failed",
+							`Panel ${i + 1}: ${errorMessage}`,
+						);
+						// Store which panel failed
+						setFailedPanel({ step: "panel", panelNumber: i + 1 });
+						throw new Error(errorMessage);
+					}
+
+					const { generatedPanel } = await panelResponse.json();
+					panels.push(generatedPanel);
+					setGeneratedPanels([...panels]);
+
+					// Auto-expand panels section after first panel is generated
+					if (i === 0) {
+						setOpenAccordions(new Set(["panels"]));
+						// Track time to first panel
+						const timeToFirstPanel = Date.now() - generationStartTime;
+						trackPerformance("time_to_first_panel", timeToFirstPanel);
+					}
+				}
+
+				setCurrentStepText("Complete! 🎉");
+				setIsGenerating(false);
+
+				// Track successful generation
+				const generationTime = Date.now() - generationStartTime;
+				trackMangaGeneration(storyWordCount, panels.length);
+				trackPerformance("total_generation_time", generationTime);
+			} catch (error) {
+				console.error("Generation error:", error);
+				const errorMessage =
+					error instanceof Error ? error.message : "Generation failed";
+				showError(errorMessage);
+				setIsGenerating(false);
+
+				// Track error
+				trackError("generation_failed", errorMessage);
+
+				// Set failed step based on current progress
+				setFailedStep(currentStep);
+			}
+		},
+		[
+			style,
+			showError,
+			uploadedCharacterReferences,
+			uploadedSettingReferences,
+			handleApiError,
+			clearResults,
+		],
+	);
+
 	// Handle escape key for modals
 	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
@@ -1228,18 +1261,6 @@ export default function Home() {
 		cancelClearData,
 		closeErrorModal,
 	]);
-
-	const clearResults = () => {
-		setStoryAnalysis(null);
-		setCharacterReferences([]);
-		setStoryBreakdown(null);
-		setGeneratedPanels([]);
-		setError(null);
-		setFailedStep(null);
-		setFailedPanel(null);
-		setUploadedCharacterReferences([]);
-		setUploadedSettingReferences([]);
-	};
 
 	// Retry functions for individual steps
 	const retryFromStep = async (step: FailedStep) => {
@@ -1865,6 +1886,65 @@ export default function Home() {
 		initializeApp();
 	}, []);
 
+	// Handle Reddit URL loading
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally omitting generateComic and hasLoadedReddit to prevent reload loops
+	useEffect(() => {
+		const handleRedditUrl = async () => {
+			const urlParams = new URLSearchParams(window.location.search);
+			const redditPath = urlParams.get("reddit");
+
+			if (!redditPath || hasLoadedReddit) return;
+
+			setHasLoadedReddit(true);
+			setIsLoadingReddit(true);
+			setCurrentStepText("Loading Reddit post...");
+
+			try {
+				const redditPost = await fetchRedditPost(redditPath);
+				const formattedStory = formatRedditStory(redditPost);
+
+				setStory(formattedStory);
+
+				// Track Reddit usage
+				trackEvent({
+					action: "reddit_post_loaded",
+					category: "user_interaction",
+					label: redditPost.subreddit,
+				});
+
+				// Auto-start generation after a brief delay
+				setTimeout(async () => {
+					await generateComic(formattedStory);
+				}, 1000);
+			} catch (error) {
+				console.error("Failed to load Reddit post:", error);
+
+				let errorMessage = "Failed to load Reddit post";
+				if (error instanceof RedditApiError) {
+					errorMessage = error.message;
+				}
+
+				// Show error in the current step text
+				setCurrentStepText(`Error: ${errorMessage}`);
+
+				trackError("reddit_loading", errorMessage);
+
+				// Clear error after a few seconds
+				setTimeout(() => {
+					setCurrentStepText("");
+					setIsLoadingReddit(false);
+				}, 3000);
+
+				return;
+			}
+
+			setIsLoadingReddit(false);
+			setCurrentStepText("");
+		};
+
+		handleRedditUrl();
+	}, []);
+
 	// Save state whenever important data changes
 	useEffect(() => {
 		if (isLoadingState) return; // Don't save while still loading
@@ -2106,7 +2186,7 @@ export default function Home() {
 									}
 								}}
 								placeholder="Enter your story here... (max 500 words)"
-								disabled={isGenerating}
+								disabled={isGenerating || isLoadingReddit}
 							/>
 							{/* Try Sample Button - only show when story is empty or has very few words */}
 							{wordCount < 10 && (
@@ -2115,7 +2195,7 @@ export default function Home() {
 										type="button"
 										className="btn-manga-secondary text-sm"
 										onClick={loadSampleText}
-										disabled={isGenerating}
+										disabled={isGenerating || isLoadingReddit}
 									>
 										📖 Try Sample Story
 									</button>
@@ -2197,7 +2277,7 @@ export default function Home() {
 												onClick={() =>
 													retryFailedPanel(failedPanel.panelNumber)
 												}
-												disabled={isGenerating}
+												disabled={isGenerating || isLoadingReddit}
 											>
 												Retry Panel {failedPanel.panelNumber}
 											</button>
@@ -2206,7 +2286,7 @@ export default function Home() {
 												type="button"
 												className="px-3 py-1 text-sm border border-manga-danger text-manga-danger rounded hover:bg-manga-danger hover:text-white transition-colors"
 												onClick={() => retryFromStep(failedStep)}
-												disabled={isGenerating}
+												disabled={isGenerating || isLoadingReddit}
 											>
 												Retry from{" "}
 												{failedStep.charAt(0).toUpperCase() +
@@ -2223,16 +2303,21 @@ export default function Home() {
 						<button
 							type="button"
 							className="btn-manga-primary w-full mb-2"
-							onClick={generateComic}
-							disabled={isGenerating || !story.trim() || wordCount > 500}
+							onClick={() => generateComic(story)}
+							disabled={
+								isGenerating ||
+								isLoadingReddit ||
+								!story.trim() ||
+								wordCount > 500
+							}
 						>
-							{isGenerating ? (
+							{isGenerating || isLoadingReddit ? (
 								<>
 									<span
 										className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
 										aria-hidden="true"
 									></span>
-									{currentStepText}
+									{currentStepText || "Loading..."}
 								</>
 							) : (
 								"Generate"
@@ -2248,7 +2333,7 @@ export default function Home() {
 								type="button"
 								className="btn-manga-outline w-full mb-2"
 								onClick={clearResults}
-								disabled={isGenerating}
+								disabled={isGenerating || isLoadingReddit}
 							>
 								Clear Previous Results
 							</button>
@@ -2260,7 +2345,7 @@ export default function Home() {
 								type="button"
 								className="btn-manga-outline w-full text-xs"
 								onClick={handleClearAllData}
-								disabled={isGenerating}
+								disabled={isGenerating || isLoadingReddit}
 								style={{ fontSize: "12px", padding: "8px 12px" }}
 							>
 								🗑️ Clear All Saved Data
@@ -2362,7 +2447,7 @@ export default function Home() {
 											<RerunButton
 												onClick={rerunAnalysis}
 												isLoading={isRerunningAnalysis}
-												disabled={isGenerating}
+												disabled={isGenerating || isLoadingReddit}
 											/>
 										</div>
 									</div>
@@ -2376,7 +2461,7 @@ export default function Home() {
 												type="button"
 												className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
 												onClick={() => retryFromStep("analysis")}
-												disabled={isGenerating}
+												disabled={isGenerating || isLoadingReddit}
 											>
 												Retry Story Analysis
 											</button>
@@ -2443,7 +2528,7 @@ export default function Home() {
 												type="button"
 												className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
 												onClick={() => retryFromStep("characters")}
-												disabled={isGenerating}
+												disabled={isGenerating || isLoadingReddit}
 											>
 												Retry Character Generation
 											</button>
@@ -2512,7 +2597,7 @@ export default function Home() {
 													type="button"
 													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
 													onClick={() => retryFromStep("layout")}
-													disabled={isGenerating}
+													disabled={isGenerating || isLoadingReddit}
 												>
 													Retry Comic Layout
 												</button>
@@ -2636,7 +2721,7 @@ export default function Home() {
 													type="button"
 													className="px-3 py-1 text-sm border border-manga-info text-manga-info rounded hover:bg-manga-info hover:text-white transition-colors mt-2"
 													onClick={() => retryFromStep("panels")}
-													disabled={isGenerating}
+													disabled={isGenerating || isLoadingReddit}
 												>
 													Retry Panel Generation
 												</button>

@@ -34,6 +34,7 @@ Transform your written stories into stunning visual manga or comic book pages us
 ## Features
 
 - **Multi-Style Generation**: Choose between Japanese manga or American comic book styles
+- **Import from Reddit**: Automatically fetch stories from Reddit by visiting `storytomanga.com/r/<subreddit>/comments/...`
 - **Character Consistency**: AI generates character reference sheets and maintains visual consistency across panels
 - **Progressive Display**: See character designs first, then comic pages as they're generated
 - **State Persistence**: Your work is automatically saved - refresh without losing progress
@@ -80,6 +81,14 @@ Edit `.env.local` and add your API key:
 GOOGLE_AI_API_KEY=your_actual_api_key_here
 ```
 
+**Optional**: If you want to use a separate API key for text generation (story analysis and chunking), you can also set:
+
+```
+GOOGLE_AI_TEXT_API_KEY=your_text_generation_api_key_here
+```
+
+If `GOOGLE_AI_TEXT_API_KEY` is provided, it will be used for text generation operations. If not, `GOOGLE_AI_API_KEY` will be used for all operations.
+
 ### 4. Run Development Server
 
 ```bash
@@ -109,6 +118,17 @@ Visit **[app.storytomanga.com](https://app.storytomanga.com)** or run locally:
    - Plans the comic layout
    - Generates individual panels
 5. Download individual panels or create a shareable composite image
+
+## Importing from Reddit
+
+You can automatically load a story from a Reddit post by going to a URL with the path to the post.
+
+**Example:**
+```
+https://app.storytomanga.com/r/<subreddit>/comments/...
+```
+
+This will load the story from the URL and automatically start the comic generation process.
 
 ## Deployment to AWS Amplify
 
