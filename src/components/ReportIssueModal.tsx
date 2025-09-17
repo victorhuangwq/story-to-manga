@@ -57,7 +57,7 @@ export default function ReportIssueModal({ isOpen, onClose }: ReportIssueModalPr
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content report-issue-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content report-issue-modal card-manga" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Report an Issue</h2>
           <button type="button" className="modal-close" onClick={onClose}>
@@ -72,7 +72,7 @@ export default function ReportIssueModal({ isOpen, onClose }: ReportIssueModalPr
               id="issue-type"
               value={type}
               onChange={(e) => setType(e.target.value as 'bug' | 'feature')}
-              className="form-select"
+              className="form-select input-manga"
             >
               <option value="bug">🐛 Bug Report</option>
               <option value="feature">✨ Feature Request</option>
@@ -90,7 +90,7 @@ export default function ReportIssueModal({ isOpen, onClose }: ReportIssueModalPr
                   ? 'Please describe the bug you encountered...'
                   : 'Please describe the feature you would like...'
               }
-              className="form-textarea"
+              className="form-textarea input-manga"
               rows={6}
               required
               disabled={isSubmitting}
@@ -113,14 +113,14 @@ export default function ReportIssueModal({ isOpen, onClose }: ReportIssueModalPr
             <button
               type="button"
               onClick={onClose}
-              className="button-secondary"
+              className="btn-manga-outline"
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="button-primary"
+              className="btn-manga-primary"
               disabled={isSubmitting || !description.trim()}
             >
               {isSubmitting ? 'Submitting...' : 'Submit'}

@@ -727,12 +727,10 @@ input[type="radio"]:checked + .btn-manga-outline {
 
 .modal-content {
   background: var(--manga-white);
-  border-radius: 0.75rem;
   max-width: 500px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   animation: modalSlideUp 0.2s ease-out;
 }
 
@@ -751,8 +749,8 @@ input[type="radio"]:checked + .btn-manga-outline {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 1.5rem 1rem 1.5rem;
-  border-bottom: 1px solid var(--manga-gray);
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--manga-black);
 }
 
 .report-issue-modal .modal-header h2 {
@@ -760,14 +758,16 @@ input[type="radio"]:checked + .btn-manga-outline {
   font-weight: 700;
   color: var(--manga-black);
   margin: 0;
+  font-family: var(--font-display-manga);
+  letter-spacing: 0.02em;
 }
 
 .report-issue-modal .modal-close {
   background: none;
-  border: none;
-  font-size: 2rem;
+  border: 2px solid transparent;
+  font-size: 1.75rem;
   line-height: 1;
-  color: var(--manga-gray);
+  color: var(--manga-black);
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -775,12 +775,15 @@ input[type="radio"]:checked + .btn-manga-outline {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.25rem;
-  transition: background-color 0.15s;
+  border-radius: var(--manga-radius-minimal);
+  transition: all 0.2s ease;
+  font-weight: 700;
 }
 
 .report-issue-modal .modal-close:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--manga-black);
+  color: var(--manga-white);
+  border-color: var(--manga-black);
 }
 
 .report-issue-modal form {
@@ -797,26 +800,11 @@ input[type="radio"]:checked + .btn-manga-outline {
   font-weight: 600;
   color: var(--manga-black);
   margin-bottom: 0.5rem;
+  font-family: var(--font-display-manga);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
 }
 
-.report-issue-modal .form-select,
-.report-issue-modal .form-textarea {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  border: 2px solid var(--manga-gray);
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  background: white;
-}
-
-.report-issue-modal .form-select:focus,
-.report-issue-modal .form-textarea:focus {
-  outline: none;
-  border-color: var(--manga-accent-gold);
-  box-shadow: 0 0 0 3px rgba(251, 184, 4, 0.1);
-}
 
 .report-issue-modal .form-textarea {
   resize: vertical;
@@ -850,63 +838,74 @@ input[type="radio"]:checked + .btn-manga-outline {
   padding-top: 0.5rem;
 }
 
-.report-issue-modal .button-secondary,
-.report-issue-modal .button-primary {
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  border: none;
+.report-issue-modal .btn-manga-primary,
+.report-issue-modal .btn-manga-outline {
+  padding: 0.625rem 1.5rem;
+  min-width: 100px;
 }
 
-.report-issue-modal .button-secondary {
-  background: white;
-  color: var(--manga-black);
-  border: 2px solid var(--manga-gray);
+/* Input styles for forms */
+.input-manga {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--manga-black);
+  border-radius: var(--manga-radius-minimal);
+  font-size: 0.9375rem;
+  font-family: var(--font-body-manga);
+  transition: all 0.2s ease;
+  background: var(--manga-white);
 }
 
-.report-issue-modal .button-secondary:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
+.input-manga:focus {
+  outline: none;
+  border-color: var(--manga-black);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--manga-light-gray);
 }
 
-.report-issue-modal .button-primary {
-  background: var(--manga-accent-gold);
-  color: white;
-  border: 2px solid var(--manga-accent-gold);
+.style-comic .input-manga {
+  border: var(--comic-border);
+  border-radius: var(--comic-radius);
+  font-family: var(--font-body-comic);
 }
 
-.report-issue-modal .button-primary:hover:not(:disabled) {
-  background: #e5a804;
-  border-color: #e5a804;
-}
-
-.report-issue-modal .button-primary:disabled,
-.report-issue-modal .button-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.style-comic .input-manga:focus {
+  box-shadow: var(--comic-shadow);
+  background: var(--comic-light-gray);
 }
 
 /* Style-specific adjustments for report modal */
 .style-manga .report-issue-modal {
-  border: 3px solid var(--manga-black);
+  border: var(--manga-border-traditional);
+  border-radius: var(--manga-radius-minimal);
+  box-shadow: var(--manga-shadow-subtle);
+}
+
+.style-manga .report-issue-modal .modal-header {
+  border-bottom: var(--manga-border-traditional);
+  background: linear-gradient(to right, var(--manga-white) 0%, var(--manga-light-gray) 100%);
 }
 
 .style-comic .report-issue-modal {
   background: var(--comic-white);
-  border: 4px solid var(--comic-black);
+  border: var(--comic-border);
   border-radius: var(--comic-radius);
-  box-shadow: 8px 8px 0 var(--comic-black);
+  box-shadow: var(--comic-shadow);
 }
 
-.style-comic .report-issue-modal .button-primary {
+.style-comic .report-issue-modal .modal-header {
+  border-bottom: var(--comic-border);
   background: var(--comic-yellow);
-  color: var(--comic-black);
-  border-color: var(--comic-black);
-  font-weight: 700;
 }
 
-.style-comic .report-issue-modal .button-primary:hover:not(:disabled) {
-  background: var(--comic-orange);
+.style-comic .report-issue-modal .modal-header h2 {
+  font-family: var(--font-display-comic);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+
+.style-comic .report-issue-modal .modal-close:hover {
+  background-color: var(--comic-black);
+  color: var(--comic-yellow);
 }
