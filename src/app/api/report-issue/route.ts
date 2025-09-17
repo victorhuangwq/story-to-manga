@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const githubToken = process.env.GITHUB_PAT;
-    const githubOwner = process.env.GITHUB_OWNER || 'victorhuangwq';
-    const githubRepo = process.env.GITHUB_REPO || 'story-to-manga';
+    const githubToken = process.env['GITHUB_PAT'];
+    const githubOwner = process.env['GITHUB_OWNER'] || 'victorhuangwq';
+    const githubRepo = process.env['GITHUB_REPO'] || 'story-to-manga';
 
     if (!githubToken) {
       console.error('GitHub PAT not configured');
