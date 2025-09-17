@@ -8,6 +8,7 @@ frontend:
     build:
       commands:
         - echo "GOOGLE_AI_API_KEY=$GOOGLE_AI_API_KEY" >> .env
+        - echo "GITHUB_PAT=$GITHUB_PAT" >> .env
         - npm run build
   artifacts:
     baseDirectory: .next
