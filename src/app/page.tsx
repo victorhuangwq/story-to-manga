@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useRef } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import AccordionSection from "@/components/AccordionSection";
 import CharacterCard from "@/components/CharacterCard";
 import CollapsibleSection from "@/components/CollapsibleSection";
@@ -9,6 +9,7 @@ import ImageUpload from "@/components/ImageUpload";
 import PanelCard from "@/components/PanelCard";
 import RerunButton from "@/components/RerunButton";
 import ShareableComicLayout from "@/components/ShareableComicLayout";
+import ReportIssueModal from "@/components/ReportIssueModal";
 import { useAppInitialization } from "@/hooks/useAppInitialization";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useModalEscape } from "@/hooks/useEscapeKey";
@@ -62,6 +63,9 @@ export default function Home() {
 	const comicRadioId = useId();
 	const storyTextareaId = useId();
 	const analysisHeadingId = useId();
+
+	// State for report issue modal
+	const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 	const charactersHeadingId = useId();
 	const layoutHeadingId = useId();
 	const panelsHeadingId = useId();
@@ -1147,10 +1151,9 @@ export default function Home() {
 			</div>
 
 			{/* Floating Report Issue Button */}
-			<a
-				href="https://github.com/victorhuangwq/story-to-manga/issues/new"
-				target="_blank"
-				rel="noopener noreferrer"
+			<button
+				type="button"
+				onClick={() => setIsReportModalOpen(true)}
 				className="floating-report-btn"
 				title="Report an issue"
 			>
@@ -1159,7 +1162,13 @@ export default function Home() {
 					<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-6h-2v6zm0-8h2V7h-2v2z" />
 				</svg>
 				Report Issue
-			</a>
+			</button>
+
+			{/* Report Issue Modal */}
+			<ReportIssueModal
+				isOpen={isReportModalOpen}
+				onClose={() => setIsReportModalOpen(false)}
+			/>
 
 			{/* Image Modal */}
 			{modalImage && (

@@ -1,0 +1,40 @@
+name: Create Issue from User Report
+
+on:
+  repository_dispatch:
+    types: [create-issue]
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { type, description, user_agent, timestamp } = context.payload.client_payload;
+
+            const title = `[${type === 'bug' ? 'Bug Report' : 'Feature Request'}] User submitted report`;
+
+            const labels = type === 'bug' ? ['bug', 'user-reported'] : ['enhancement', 'user-reported'];
+
+            const body = `## Type
+            ${type === 'bug' ? '🐛 Bug Report' : '✨ Feature Request'}
+
+            ## Description
+            ${description}
+
+            ## Metadata
+            - **Submitted at:** ${timestamp}
+            - **User Agent:** ${user_agent}
+
+            ---
+            *This issue was automatically created from a user submission via the web form.*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: labels
+            });
