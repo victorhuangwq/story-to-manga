@@ -32,6 +32,7 @@ export const storyAnalysisLogger = createModuleLogger("story-analysis");
 export const characterGenLogger = createModuleLogger("character-generation");
 export const storyChunkingLogger = createModuleLogger("story-chunking");
 export const panelLogger = createModuleLogger("panel-generation");
+export const streamLogger = createModuleLogger("stream-generation");
 
 // Helper function to log API request/response
 export const logApiRequest = (

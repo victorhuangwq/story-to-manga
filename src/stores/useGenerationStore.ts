@@ -167,6 +167,12 @@ interface GenerationActions {
 		uploadedCharacterReferences: UploadedCharacterReference[],
 		uploadedSettingReferences: UploadedSettingReference[],
 	) => Promise<void>;
+	generateComicStream: (
+		storyText: string,
+		style: ComicStyle,
+		uploadedCharacterReferences: UploadedCharacterReference[],
+		uploadedSettingReferences: UploadedSettingReference[],
+	) => Promise<void>;
 	retryFromStep: (step: FailedStep) => Promise<void>;
 	retryFailedPanel: (panelNumber: number, panelIndex: number) => Promise<void>;
 	// Utility actions
@@ -595,6 +601,168 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 						failedStep: currentStep,
 					});
 					trackError("generation_failed", errorMessage);
+				}
+			},
+
+			// Streaming generation method
+			generateComicStream: async (
+				storyText,
+				style,
+				uploadedCharacterReferences,
+				uploadedSettingReferences,
+			) => {
+				const state = _get();
+
+				if (!storyText.trim()) {
+					set({ error: "Please enter a story" });
+					return;
+				}
+
+				const storyWordCount = storyText
+					.split(/\s+/)
+					.filter((word) => word.length > 0).length;
+				if (storyWordCount > 500) {
+					set({ error: "Story must be 500 words or less" });
+					return;
+				}
+
+				// Clear previous results
+				state.clearResults();
+
+				// Track generation start
+				const generationStartTime = Date.now();
+				trackEvent({
+					action: "start_generation_stream",
+					category: "manga_generation",
+					label: style,
+					value: storyWordCount,
+				});
+
+				set({
+					isGenerating: true,
+					currentStepText: "Connecting to stream...",
+					error: null,
+					failedStep: null,
+					failedPanel: null,
+				});
+
+				try {
+					const response = await fetch("/api/generate-manga-stream", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							story: storyText,
+							style,
+							uploadedCharacterReferences,
+							uploadedSettingReferences,
+						}),
+					});
+
+					if (!response.ok) {
+						throw new Error(`Stream request failed: ${response.statusText}`);
+					}
+
+					const reader = response.body!.getReader();
+					const decoder = new TextDecoder();
+					let buffer = "";
+
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+
+						buffer += decoder.decode(value, { stream: true });
+						const lines = buffer.split("\n");
+						buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+						for (const line of lines) {
+							if (!line.trim()) continue;
+
+							try {
+								const message = JSON.parse(line);
+								await handleStreamMessage(message, generationStartTime);
+							} catch (e) {
+								console.error("Failed to parse stream message:", line, e);
+							}
+						}
+					}
+				} catch (error) {
+					console.error("Stream error:", error);
+					const errorMessage =
+						error instanceof Error ? error.message : "Generation failed";
+					set({
+						error: errorMessage,
+						isGenerating: false,
+					});
+					trackError("stream_generation_failed", errorMessage);
+				}
+
+				// Helper function to handle stream messages
+				async function handleStreamMessage(
+					message: any,
+					startTime: number,
+				): Promise<void> {
+					switch (message.type) {
+						case "status":
+							set({ currentStepText: message.message });
+							break;
+
+						case "analysis":
+							set({
+								storyAnalysis: message.data,
+								openAccordions: new Set(["analysis"]),
+							});
+							break;
+
+						case "chunks":
+							set({
+								storyBreakdown: message.data,
+								openAccordions: new Set(["layout"]),
+							});
+							break;
+
+						case "character":
+							const currentChars = _get().characterReferences;
+							await _get().setCharacterReferences([
+								...currentChars,
+								message.data,
+							]);
+							set({ openAccordions: new Set(["characters"]) });
+							break;
+
+						case "panel":
+							const currentPanels = _get().generatedPanels;
+							const updated = [...currentPanels];
+							updated[message.panelNumber] = message.data;
+							await _get().setGeneratedPanels(updated);
+							if (message.panelNumber === 0) {
+								set({ openAccordions: new Set(["panels"]) });
+								// Track time to first panel
+								const timeToFirstPanel = Date.now() - startTime;
+								trackPerformance("time_to_first_panel", timeToFirstPanel);
+							}
+							break;
+
+						case "error":
+							console.error("Generation error:", message);
+							if (!message.retrying) {
+								set({
+									error: `Error during ${message.step}: ${message.message}`,
+									failedStep: message.step === "panel" ? "panels" : message.step,
+								});
+								trackError(`stream_${message.step}_failed`, message.message);
+							}
+							break;
+
+						case "complete":
+							set({
+								currentStepText: "Complete! 🎉",
+								isGenerating: false,
+							});
+							// Track successful generation
+							trackMangaGeneration(storyWordCount, message.totalPanels);
+							trackPerformance("total_generation_time", Date.now() - startTime);
+							break;
+					}
 				}
 			},
 

@@ -98,6 +98,7 @@ export default function Home() {
 		currentStepText,
 		openAccordions,
 		generateComic,
+		generateComicStream,
 		retryFromStep,
 		retryFailedPanel,
 		setError,
@@ -647,7 +648,7 @@ export default function Home() {
 							type="button"
 							className="btn-manga-primary w-full mb-2"
 							onClick={() =>
-								generateComic(
+								generateComicStream(
 									story,
 									style,
 									uploadedCharacterReferences,
