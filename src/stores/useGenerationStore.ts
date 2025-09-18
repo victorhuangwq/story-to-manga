@@ -6,6 +6,7 @@ import {
 	trackMangaGeneration,
 	trackPerformance,
 } from "@/lib/analytics";
+import { useUIStore } from "@/stores/useUIStore";
 import type {
 	CharacterReference,
 	ComicStyle,
@@ -15,7 +16,6 @@ import type {
 	UploadedCharacterReference,
 	UploadedSettingReference,
 } from "@/types";
-import { useUIStore } from "@/stores/useUIStore";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
 type FailedPanel = { step: "panel"; panelNumber: number } | null;
@@ -261,14 +261,11 @@ interface GenerationActions {
 		style: ComicStyle,
 		uploadedCharacterReferences: UploadedCharacterReference[],
 		uploadedSettingReferences: UploadedSettingReference[],
+		startFromStep?: FailedStep,
+		startFromPanelIndex?: number,
 	) => Promise<void>;
 	retryFromStep: (step: FailedStep) => Promise<void>;
 	retryFailedPanel: (panelNumber: number, panelIndex: number) => Promise<void>;
-	// Step-specific retry methods
-	retryAnalysis: () => Promise<void>;
-	retryCharacters: () => Promise<void>;
-	retryLayout: () => Promise<void>;
-	retryPanels: () => Promise<void>;
 	// Utility actions
 	resetGeneration: () => void;
 	clearResults: () => void;
@@ -437,196 +434,6 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					]),
 				}),
 			resetGeneration: () => set(initialState),
-
-			// Step-specific retry methods
-			retryAnalysis: async () => {
-				const state = _get();
-				if (!state.originalStoryText) {
-					throw new Error("No original story text found for retry");
-				}
-
-				set({
-					currentStepText: "Re-analyzing your story...",
-					storyAnalysis: null,
-					characterReferences: [],
-					storyBreakdown: null,
-					generatedPanels: [],
-				});
-
-				const analysisResponse = await fetch("/api/analyze-story", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						story: state.originalStoryText,
-						style: state.originalStyle,
-					}),
-				});
-
-				if (!analysisResponse.ok) {
-					throw new Error(
-						await handleApiError(
-							analysisResponse,
-							"Failed to re-analyze story",
-						),
-					);
-				}
-
-				const { analysis } = await analysisResponse.json();
-				set({
-					storyAnalysis: analysis,
-					openAccordions: new Set(["analysis"]),
-				});
-			},
-
-			retryCharacters: async () => {
-				const state = _get();
-				if (!state.storyAnalysis) {
-					throw new Error(
-						"No story analysis found. Please retry from analysis step.",
-					);
-				}
-
-				set({
-					currentStepText: "Re-creating character designs...",
-					characterReferences: [],
-					storyBreakdown: null,
-					generatedPanels: [],
-				});
-
-				const charRefResponse = await fetch("/api/generate-character-refs", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						characters: state.storyAnalysis.characters,
-						setting: state.storyAnalysis.setting,
-						style: state.originalStyle,
-						uploadedCharacterReferences:
-							state.originalUploadedCharacterReferences,
-					}),
-				});
-
-				if (!charRefResponse.ok) {
-					throw new Error(
-						await handleApiError(
-							charRefResponse,
-							"Failed to re-generate character references",
-						),
-					);
-				}
-
-				const { characterReferences } = await charRefResponse.json();
-				await _get().setCharacterReferences(characterReferences);
-				set({ openAccordions: new Set(["characters"]) });
-			},
-
-			retryLayout: async () => {
-				const state = _get();
-				if (!state.storyAnalysis || !state.characterReferences.length) {
-					throw new Error(
-						"Missing story analysis or character references. Please retry from an earlier step.",
-					);
-				}
-
-				set({
-					currentStepText: "Re-planning comic layout...",
-					storyBreakdown: null,
-					generatedPanels: [],
-				});
-
-				const storyBreakdownResponse = await fetch("/api/chunk-story", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						story: state.originalStoryText,
-						characters: state.storyAnalysis.characters,
-						setting: state.storyAnalysis.setting,
-						style: state.originalStyle,
-					}),
-				});
-
-				if (!storyBreakdownResponse.ok) {
-					throw new Error(
-						await handleApiError(
-							storyBreakdownResponse,
-							"Failed to re-break down story",
-						),
-					);
-				}
-
-				const { storyBreakdown: breakdown } =
-					await storyBreakdownResponse.json();
-				set({
-					storyBreakdown: breakdown,
-					openAccordions: new Set(["layout"]),
-				});
-			},
-
-			retryPanels: async () => {
-				const state = _get();
-				if (
-					!state.storyAnalysis ||
-					!state.characterReferences.length ||
-					!state.storyBreakdown
-				) {
-					throw new Error(
-						"Missing required data for panel generation. Please retry from an earlier step.",
-					);
-				}
-
-				set({
-					currentStepText: "Re-generating comic panels...",
-					generatedPanels: [],
-				});
-
-				const panels: GeneratedPanel[] = [];
-				const generationStartTime = Date.now();
-
-				for (let i = 0; i < state.storyBreakdown.panels.length; i++) {
-					const panel = state.storyBreakdown.panels[i];
-					set({
-						currentStepText: `Re-generating panel ${i + 1}/${state.storyBreakdown.panels.length}...`,
-					});
-
-					const panelResponse = await fetch("/api/generate-panel", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							panel,
-							characterReferences: state.characterReferences,
-							setting: state.storyAnalysis.setting,
-							style: state.originalStyle,
-							uploadedSettingReferences:
-								state.originalUploadedSettingReferences,
-						}),
-					});
-
-					if (!panelResponse.ok) {
-						const errorMessage = await handleApiError(
-							panelResponse,
-							`Failed to regenerate panel ${i + 1}`,
-						);
-						trackError(
-							"panel_regeneration_failed",
-							`Panel ${i + 1}: ${errorMessage}`,
-						);
-						set({ failedPanel: { step: "panel", panelNumber: i + 1 } });
-						throw new Error(errorMessage);
-					}
-
-					const { generatedPanel } = await panelResponse.json();
-					panels.push(generatedPanel);
-					await _get().setGeneratedPanels([...panels]);
-
-					// Auto-expand panels section after first panel
-					if (i === 0) {
-						set({ openAccordions: new Set(["panels"]) });
-						const timeToFirstPanel = Date.now() - generationStartTime;
-						trackPerformance("time_to_first_panel_retry", timeToFirstPanel);
-					}
-				}
-
-				set({ openAccordions: new Set(["panels"]) });
-			},
 			clearResults: () =>
 				set({
 					storyAnalysis: null,
@@ -740,6 +547,8 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 				style,
 				uploadedCharacterReferences,
 				uploadedSettingReferences,
+				startFromStep = null,
+				startFromPanelIndex = 0,
 			) => {
 				const state = _get();
 
@@ -764,150 +573,232 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					originalUploadedSettingReferences: uploadedSettingReferences,
 				});
 
-				// Clear previous results
-				state.clearResults();
+				// Clear previous results only if starting from beginning
+				if (!startFromStep) {
+					state.clearResults();
+				}
 
 				// Track generation progress
-				let currentStep: FailedStep = null;
+				let currentStep: FailedStep = startFromStep;
 				const generationStartTime = Date.now();
 
-				trackEvent({
-					action: "start_generation",
-					category: "manga_generation",
-					label: style,
-					value: storyWordCount,
-				});
+				if (!startFromStep) {
+					trackEvent({
+						action: "start_generation",
+						category: "manga_generation",
+						label: style,
+						value: storyWordCount,
+					});
+				}
 
 				set({
 					isGenerating: true,
-					currentStepText: "Analyzing your story...",
 					error: null,
 					failedStep: null,
 					failedPanel: null,
 				});
 
 				try {
-					// Step 1: Analyze story
-					currentStep = "analysis";
-					const analysisResponse = await fetch("/api/analyze-story", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ story: storyText, style }),
-					});
+					let analysis = state.storyAnalysis;
+					let characterReferences = state.characterReferences;
+					let breakdown = state.storyBreakdown;
 
-					if (!analysisResponse.ok) {
-						throw new Error(
-							await handleApiError(analysisResponse, "Failed to analyze story"),
-						);
-					}
-
-					const { analysis } = await analysisResponse.json();
-					set({
-						storyAnalysis: analysis,
-						openAccordions: new Set(["analysis"]),
-					});
-
-					// Step 2: Generate character references
-					currentStep = "characters";
-					set({ currentStepText: "Creating character designs..." });
-					const charRefResponse = await fetch("/api/generate-character-refs", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							characters: analysis.characters,
-							setting: analysis.setting,
-							style,
-							uploadedCharacterReferences,
-						}),
-					});
-
-					if (!charRefResponse.ok) {
-						throw new Error(
-							await handleApiError(
-								charRefResponse,
-								"Failed to generate character references",
-							),
-						);
-					}
-
-					const { characterReferences } = await charRefResponse.json();
-					await _get().setCharacterReferences(characterReferences);
-					set({ openAccordions: new Set(["characters"]) });
-
-					// Step 3: Break down story into panels
-					currentStep = "layout";
-					set({ currentStepText: "Planning comic layout..." });
-					const storyBreakdownResponse = await fetch("/api/chunk-story", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							story: storyText,
-							characters: analysis.characters,
-							setting: analysis.setting,
-							style,
-						}),
-					});
-
-					if (!storyBreakdownResponse.ok) {
-						throw new Error(
-							await handleApiError(
-								storyBreakdownResponse,
-								"Failed to break down story",
-							),
-						);
-					}
-
-					const { storyBreakdown: breakdown } =
-						await storyBreakdownResponse.json();
-					set({
-						storyBreakdown: breakdown,
-						openAccordions: new Set(["layout"]),
-					});
-
-					// Step 4: Generate comic panels
-					currentStep = "panels";
-					const panels: GeneratedPanel[] = [];
-
-					for (let i = 0; i < breakdown.panels.length; i++) {
-						const panel = breakdown.panels[i];
-						set({
-							currentStepText: `Generating panel ${i + 1}/${breakdown.panels.length}...`,
+					// Step 1: Analyze story (skip if starting from later step and we have analysis)
+					if (!startFromStep || startFromStep === "analysis" || !analysis) {
+						currentStep = "analysis";
+						set({ currentStepText: "Analyzing your story..." });
+						const analysisResponse = await fetch("/api/analyze-story", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ story: storyText, style }),
 						});
 
-						const panelResponse = await fetch("/api/generate-panel", {
+						if (!analysisResponse.ok) {
+							throw new Error(
+								await handleApiError(
+									analysisResponse,
+									"Failed to analyze story",
+								),
+							);
+						}
+
+						const { analysis: newAnalysis } = await analysisResponse.json();
+						analysis = newAnalysis;
+						set({
+							storyAnalysis: analysis,
+							openAccordions: new Set(["analysis"]),
+						});
+					}
+
+					// Step 2: Generate character references (skip if we already have them and not retrying from this step)
+					if (
+						!startFromStep ||
+						startFromStep === "analysis" ||
+						startFromStep === "characters" ||
+						!characterReferences.length
+					) {
+						if (!analysis) {
+							throw new Error(
+								"Story analysis is required for character generation",
+							);
+						}
+
+						currentStep = "characters";
+						set({ currentStepText: "Creating character designs..." });
+						const charRefResponse = await fetch(
+							"/api/generate-character-refs",
+							{
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									characters: analysis.characters,
+									setting: analysis.setting,
+									style,
+									uploadedCharacterReferences,
+								}),
+							},
+						);
+
+						if (!charRefResponse.ok) {
+							throw new Error(
+								await handleApiError(
+									charRefResponse,
+									"Failed to generate character references",
+								),
+							);
+						}
+
+						const { characterReferences: newCharacterReferences } =
+							await charRefResponse.json();
+						characterReferences = newCharacterReferences;
+						await _get().setCharacterReferences(characterReferences);
+						set({ openAccordions: new Set(["characters"]) });
+					}
+
+					// Step 3: Break down story into panels (skip if we already have breakdown and not retrying from this step)
+					if (
+						!startFromStep ||
+						startFromStep === "analysis" ||
+						startFromStep === "characters" ||
+						startFromStep === "layout" ||
+						!breakdown
+					) {
+						if (!analysis) {
+							throw new Error(
+								"Story analysis is required for layout generation",
+							);
+						}
+
+						currentStep = "layout";
+						set({ currentStepText: "Planning comic layout..." });
+						const storyBreakdownResponse = await fetch("/api/chunk-story", {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
-								panel,
-								characterReferences,
+								story: storyText,
+								characters: analysis.characters,
 								setting: analysis.setting,
 								style,
-								uploadedSettingReferences,
 							}),
 						});
 
-						if (!panelResponse.ok) {
-							const errorMessage = await handleApiError(
-								panelResponse,
-								`Failed to generate panel ${i + 1}`,
+						if (!storyBreakdownResponse.ok) {
+							throw new Error(
+								await handleApiError(
+									storyBreakdownResponse,
+									"Failed to break down story",
+								),
 							);
-							trackError(
-								"panel_generation_failed",
-								`Panel ${i + 1}: ${errorMessage}`,
-							);
-							set({ failedPanel: { step: "panel", panelNumber: i + 1 } });
-							throw new Error(errorMessage);
 						}
 
-						const { generatedPanel } = await panelResponse.json();
-						panels.push(generatedPanel);
-						await _get().setGeneratedPanels([...panels]);
+						const { storyBreakdown: newBreakdown } =
+							await storyBreakdownResponse.json();
+						breakdown = newBreakdown;
+						set({
+							storyBreakdown: breakdown,
+							openAccordions: new Set(["layout"]),
+						});
+					}
 
-						// Auto-expand panels section after first panel
-						if (i === 0) {
-							set({ openAccordions: new Set(["panels"]) });
-							const timeToFirstPanel = Date.now() - generationStartTime;
-							trackPerformance("time_to_first_panel", timeToFirstPanel);
+					// Step 4: Generate comic panels
+					if (
+						!startFromStep ||
+						startFromStep === "analysis" ||
+						startFromStep === "characters" ||
+						startFromStep === "layout" ||
+						startFromStep === "panels"
+					) {
+						if (!breakdown || !analysis) {
+							throw new Error(
+								"Story breakdown and analysis are required for panel generation",
+							);
+						}
+
+						currentStep = "panels";
+
+						// Start with existing panels if any
+						const existingPanels = state.generatedPanels || [];
+						const panels: GeneratedPanel[] = [...existingPanels];
+
+						// Determine starting index - either from parameter or from existing panels
+						const startIndex =
+							startFromStep === "panels" &&
+							typeof startFromPanelIndex === "number"
+								? startFromPanelIndex
+								: existingPanels.length;
+
+						for (let i = startIndex; i < breakdown.panels.length; i++) {
+							const panel = breakdown.panels[i];
+							set({
+								currentStepText: `Generating panel ${i + 1}/${breakdown.panels.length}...`,
+							});
+
+							const panelResponse = await fetch("/api/generate-panel", {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									panel,
+									characterReferences,
+									setting: analysis.setting,
+									style,
+									uploadedSettingReferences,
+								}),
+							});
+
+							if (!panelResponse.ok) {
+								const errorMessage = await handleApiError(
+									panelResponse,
+									`Failed to generate panel ${i + 1}`,
+								);
+								trackError(
+									"panel_generation_failed",
+									`Panel ${i + 1}: ${errorMessage}`,
+								);
+								set({ failedPanel: { step: "panel", panelNumber: i + 1 } });
+								throw new Error(errorMessage);
+							}
+
+							const { generatedPanel } = await panelResponse.json();
+
+							// Replace existing panel or add new one
+							const existingIndex = panels.findIndex(
+								(p) => p.panelNumber === generatedPanel.panelNumber,
+							);
+							if (existingIndex >= 0) {
+								panels[existingIndex] = generatedPanel;
+							} else {
+								panels.push(generatedPanel);
+								panels.sort((a, b) => a.panelNumber - b.panelNumber);
+							}
+
+							await _get().setGeneratedPanels([...panels]);
+
+							// Auto-expand panels section after first panel
+							if (i === 0) {
+								set({ openAccordions: new Set(["panels"]) });
+								const timeToFirstPanel = Date.now() - generationStartTime;
+								trackPerformance("time_to_first_panel", timeToFirstPanel);
+							}
 						}
 					}
 
@@ -915,7 +806,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 
 					// Track successful generation
 					const generationTime = Date.now() - generationStartTime;
-					trackMangaGeneration(storyWordCount, panels.length);
+					trackMangaGeneration(storyWordCount, state.generatedPanels.length);
 					trackPerformance("total_generation_time", generationTime);
 				} catch (error) {
 					console.error("Generation error:", error);
@@ -938,9 +829,9 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 				if (!step) return;
 
 				const state = _get();
-				if (!state.storyAnalysis) {
+				if (!state.originalStoryText) {
 					_get().setErrorWithContext(
-						"No story analysis found. Please start generation from the beginning.",
+						"No original story found. Please start generation from the beginning.",
 						"Retry Failed",
 					);
 					return;
@@ -952,63 +843,21 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					label: step,
 				});
 
-				set({
-					isGenerating: true,
-					error: null,
-					errorCategory: null,
-					errorSuggestion: null,
-					failedStep: null,
-					failedPanel: null,
-				});
-
-				try {
-					switch (step) {
-						case "analysis":
-							await _get().retryAnalysis();
-							break;
-						case "characters":
-							await _get().retryCharacters();
-							break;
-						case "layout":
-							await _get().retryLayout();
-							break;
-						case "panels":
-							await _get().retryPanels();
-							break;
-						default:
-							throw new Error(`Unknown step: ${step}`);
-					}
-					set({ currentStepText: "Complete! 🎉", isGenerating: false });
-				} catch (error) {
-					console.error("Retry error:", error);
-					const errorMessage =
-						error instanceof Error ? error.message : "Retry failed";
-					_get().setErrorWithContext(errorMessage, `${step} retry failed`);
-					set({
-						isGenerating: false,
-						failedStep: step,
-					});
-				}
+				// Use the main generation flow starting from the specified step
+				await _get().generateComic(
+					state.originalStoryText,
+					state.originalStyle,
+					state.originalUploadedCharacterReferences || [],
+					state.originalUploadedSettingReferences || [],
+					step,
+				);
 			},
 
 			retryFailedPanel: async (panelNumber, panelIndex) => {
 				const state = _get();
-				if (
-					!state.storyBreakdown ||
-					!state.characterReferences.length ||
-					!state.storyAnalysis
-				) {
+				if (!state.originalStoryText) {
 					_get().setErrorWithContext(
-						"Missing required data for panel regeneration. Please start generation from the beginning.",
-						"Panel Retry Failed",
-					);
-					return;
-				}
-
-				const panelData = state.storyBreakdown.panels[panelIndex];
-				if (!panelData) {
-					_get().setErrorWithContext(
-						`Panel ${panelNumber} not found in story breakdown.`,
+						"No original story found. Please start generation from the beginning.",
 						"Panel Retry Failed",
 					);
 					return;
@@ -1020,60 +869,15 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					label: `panel_${panelNumber}`,
 				});
 
-				set({
-					isGenerating: true,
-					error: null,
-					errorCategory: null,
-					errorSuggestion: null,
-					failedPanel: null,
-					currentStepText: `Retrying panel ${panelNumber}...`,
-				});
-
-				try {
-					// Use existing data to regenerate the panel
-					const panelResponse = await fetch("/api/generate-panel", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							panel: panelData,
-							characterReferences: state.characterReferences,
-							setting: state.storyAnalysis.setting,
-							style: state.originalStyle, // Use original style
-							uploadedSettingReferences:
-								state.originalUploadedSettingReferences,
-						}),
-					});
-
-					if (!panelResponse.ok) {
-						const errorMessage = await handleApiError(
-							panelResponse,
-							`Failed to regenerate panel ${panelNumber}`,
-							`Panel ${panelNumber} Retry`,
-						);
-						throw new Error(errorMessage);
-					}
-
-					const { generatedPanel } = await panelResponse.json();
-					await _get().updateGeneratedPanel(panelNumber, generatedPanel);
-
-					set({
-						currentStepText: "Complete! 🎉",
-						isGenerating: false,
-						openAccordions: new Set(["panels"]), // Show panels section
-					});
-				} catch (error) {
-					console.error("Panel retry error:", error);
-					const errorMessage =
-						error instanceof Error ? error.message : "Panel retry failed";
-					_get().setErrorWithContext(
-						errorMessage,
-						`Panel ${panelNumber} retry failed`,
-					);
-					set({
-						isGenerating: false,
-						failedPanel: { step: "panel", panelNumber },
-					});
-				}
+				// Use the main generation flow starting from the failed panel
+				await _get().generateComic(
+					state.originalStoryText,
+					state.originalStyle,
+					state.originalUploadedCharacterReferences || [],
+					state.originalUploadedSettingReferences || [],
+					"panels",
+					panelIndex,
+				);
 			},
 		}),
 		{
