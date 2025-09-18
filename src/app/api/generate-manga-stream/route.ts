@@ -185,6 +185,10 @@ export async function POST(request: NextRequest) {
 					// Step 4: Generate panels
 					for (let i = 0; i < chunks.panels.length; i++) {
 						const panel = chunks.panels[i];
+						if (!panel) {
+							streamLogger.error({ panelIndex: i }, "Panel is undefined, skipping");
+							continue;
+						}
 						send({
 							type: "status",
 							step: "panel",
