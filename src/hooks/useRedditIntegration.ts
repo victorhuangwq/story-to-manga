@@ -84,8 +84,20 @@ export function useRedditIntegration(props: UseRedditIntegrationProps) {
 					errorMessage = error.message;
 				}
 
+				// Create helpful error message for Reddit loading failures
+				const redditErrorMessage = `${errorMessage}
+
+Please try copying and pasting the story title and content directly instead:
+
+1. Go back to the Reddit post
+2. Copy the post title and paste it into the story text area
+3. Copy the post content and add it to the story text area
+4. Click Generate to create your comic
+
+This will help ensure the story is processed correctly.`;
+
 				// Show error in a modal
-				showError(errorMessage);
+				showError(redditErrorMessage);
 
 				trackError("reddit_loading", errorMessage);
 

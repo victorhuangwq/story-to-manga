@@ -7,9 +7,9 @@ import CollapsibleSection from "@/components/CollapsibleSection";
 import DownloadButton from "@/components/DownloadButton";
 import ImageUpload from "@/components/ImageUpload";
 import PanelCard from "@/components/PanelCard";
+import ReportIssueModal from "@/components/ReportIssueModal";
 import RerunButton from "@/components/RerunButton";
 import ShareableComicLayout from "@/components/ShareableComicLayout";
-import ReportIssueModal from "@/components/ReportIssueModal";
 import { useAppInitialization } from "@/hooks/useAppInitialization";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useModalEscape } from "@/hooks/useEscapeKey";
@@ -92,6 +92,8 @@ export default function Home() {
 		storyBreakdown,
 		generatedPanels,
 		error,
+		errorCategory,
+		errorSuggestion,
 		failedStep,
 		failedPanel,
 		isGenerating,
@@ -608,6 +610,16 @@ export default function Home() {
 								role="alert"
 							>
 								<strong>Error:</strong> {error}
+								{errorSuggestion && (
+									<div className="mt-2 text-sm opacity-80">
+										<strong>Suggestion:</strong> {errorSuggestion}
+									</div>
+								)}
+								{errorCategory && (
+									<div className="mt-1 text-xs opacity-60">
+										Category: {errorCategory.replace("_", " ")}
+									</div>
+								)}
 								{(failedStep || failedPanel) && (
 									<div className="mt-2">
 										{failedPanel ? (
