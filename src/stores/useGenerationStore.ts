@@ -109,6 +109,45 @@ class ImageStorage {
 // Single instance
 const imageStorage = new ImageStorage();
 
+// Reusable panel generation helper to avoid code duplication
+const generateSinglePanelWithApi = async (
+	panelData: {
+		panelNumber: number;
+		characters: string[];
+		sceneDescription: string;
+		dialogue?: string;
+		cameraAngle: string;
+		visualMood: string;
+	},
+	characterReferences: CharacterReference[],
+	setting: { timePeriod: string; location: string; mood: string },
+	style: ComicStyle,
+	uploadedSettingReferences: UploadedSettingReference[],
+): Promise<GeneratedPanel> => {
+	const panelResponse = await fetch("/api/generate-panel", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			panel: panelData,
+			characterReferences,
+			setting,
+			style,
+			uploadedSettingReferences,
+		}),
+	});
+
+	if (!panelResponse.ok) {
+		const errorMessage = await handleApiError(
+			panelResponse,
+			`Failed to generate panel ${panelData.panelNumber}`,
+		);
+		throw new Error(errorMessage);
+	}
+
+	const { generatedPanel } = await panelResponse.json();
+	return generatedPanel;
+};
+
 // Enhanced API Error Helper with better context
 const handleApiError = async (
 	response: Response,
@@ -266,6 +305,7 @@ interface GenerationActions {
 	) => Promise<void>;
 	retryFromStep: (step: FailedStep) => Promise<void>;
 	retryFailedPanel: (panelNumber: number, panelIndex: number) => Promise<void>;
+	regeneratePanel: (panelNumber: number) => Promise<void>;
 	// Utility actions
 	resetGeneration: () => void;
 	clearResults: () => void;
@@ -747,57 +787,51 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 								? startFromPanelIndex
 								: existingPanels.length;
 
-						for (let i = startIndex; i < breakdown.panels.length; i++) {
-							const panel = breakdown.panels[i];
+						for (let i = startIndex; i < breakdown!.panels.length; i++) {
+							const panel = breakdown!.panels[i];
 							set({
-								currentStepText: `Generating panel ${i + 1}/${breakdown.panels.length}...`,
+								currentStepText: `Generating panel ${i + 1}/${breakdown!.panels.length}...`,
 							});
 
-							const panelResponse = await fetch("/api/generate-panel", {
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									panel,
+							try {
+								const generatedPanel = await generateSinglePanelWithApi(
+									panel!,
 									characterReferences,
-									setting: analysis.setting,
+									analysis.setting,
 									style,
 									uploadedSettingReferences,
-								}),
-							});
-
-							if (!panelResponse.ok) {
-								const errorMessage = await handleApiError(
-									panelResponse,
-									`Failed to generate panel ${i + 1}`,
 								);
+
+								// Replace existing panel or add new one
+								const existingIndex = panels.findIndex(
+									(p) => p.panelNumber === generatedPanel.panelNumber,
+								);
+								if (existingIndex >= 0) {
+									panels[existingIndex] = generatedPanel;
+								} else {
+									panels.push(generatedPanel);
+									panels.sort((a, b) => a.panelNumber - b.panelNumber);
+								}
+
+								await _get().setGeneratedPanels([...panels]);
+
+								// Auto-expand panels section after first panel
+								if (i === 0) {
+									set({ openAccordions: new Set(["panels"]) });
+									const timeToFirstPanel = Date.now() - generationStartTime;
+									trackPerformance("time_to_first_panel", timeToFirstPanel);
+								}
+							} catch (error) {
+								const errorMessage =
+									error instanceof Error
+										? error.message
+										: `Failed to generate panel ${i + 1}`;
 								trackError(
 									"panel_generation_failed",
 									`Panel ${i + 1}: ${errorMessage}`,
 								);
 								set({ failedPanel: { step: "panel", panelNumber: i + 1 } });
-								throw new Error(errorMessage);
-							}
-
-							const { generatedPanel } = await panelResponse.json();
-
-							// Replace existing panel or add new one
-							const existingIndex = panels.findIndex(
-								(p) => p.panelNumber === generatedPanel.panelNumber,
-							);
-							if (existingIndex >= 0) {
-								panels[existingIndex] = generatedPanel;
-							} else {
-								panels.push(generatedPanel);
-								panels.sort((a, b) => a.panelNumber - b.panelNumber);
-							}
-
-							await _get().setGeneratedPanels([...panels]);
-
-							// Auto-expand panels section after first panel
-							if (i === 0) {
-								set({ openAccordions: new Set(["panels"]) });
-								const timeToFirstPanel = Date.now() - generationStartTime;
-								trackPerformance("time_to_first_panel", timeToFirstPanel);
+								throw error;
 							}
 						}
 					}
@@ -878,6 +912,74 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					"panels",
 					panelIndex,
 				);
+			},
+
+			regeneratePanel: async (panelNumber) => {
+				const state = _get();
+
+				// Validate we have all required data
+				if (
+					!state.storyBreakdown ||
+					!state.storyAnalysis ||
+					!state.characterReferences.length ||
+					!state.originalStyle
+				) {
+					_get().setErrorWithContext(
+						"Missing required data for panel regeneration. Please start generation from the beginning.",
+						"Panel Regeneration Failed",
+					);
+					return;
+				}
+
+				// Find the panel data from the breakdown
+				const panelData = state.storyBreakdown.panels.find(
+					(p) => p.panelNumber === panelNumber,
+				);
+				if (!panelData) {
+					_get().setErrorWithContext(
+						`Panel ${panelNumber} not found in story breakdown.`,
+						"Panel Regeneration Failed",
+					);
+					return;
+				}
+
+				trackEvent({
+					action: "regenerate_panel",
+					category: "user_interaction",
+					label: `panel_${panelNumber}`,
+				});
+
+				try {
+					// Generate the new panel using our reusable helper
+					const generatedPanel = await generateSinglePanelWithApi(
+						panelData!,
+						state.characterReferences,
+						state.storyAnalysis.setting,
+						state.originalStyle,
+						state.originalUploadedSettingReferences || [],
+					);
+
+					// Update the panel in the store
+					await _get().updateGeneratedPanel(panelNumber, generatedPanel);
+
+					trackEvent({
+						action: "regenerate_panel_success",
+						category: "user_interaction",
+						label: `panel_${panelNumber}`,
+					});
+				} catch (error) {
+					const errorMessage =
+						error instanceof Error
+							? error.message
+							: `Failed to regenerate panel ${panelNumber}`;
+
+					_get().setErrorWithContext(errorMessage, "Panel Regeneration Failed");
+
+					trackError(
+						"panel_regeneration_failed",
+						`Panel ${panelNumber}: ${errorMessage}`,
+					);
+				}
 			},
 		}),
 		{

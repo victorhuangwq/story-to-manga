@@ -1,5 +1,5 @@
 interface LoadingSpinnerProps {
-	size?: "small" | "medium";
+	size?: "small" | "medium" | "large";
 	color?: "white" | "current";
 	className?: string;
 }
@@ -12,6 +12,7 @@ export default function LoadingSpinner({
 	const sizeClasses = {
 		small: "h-3 w-3",
 		medium: "h-4 w-4",
+		large: "h-8 w-8",
 	};
 
 	const borderColorClasses = {

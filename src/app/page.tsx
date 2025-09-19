@@ -66,6 +66,10 @@ export default function Home() {
 
 	// State for report issue modal
 	const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+	// State for tracking which panels are being regenerated
+	const [regeneratingPanels, setRegeneratingPanels] = useState<Set<number>>(
+		new Set(),
+	);
 	const charactersHeadingId = useId();
 	const layoutHeadingId = useId();
 	const panelsHeadingId = useId();
@@ -102,6 +106,7 @@ export default function Home() {
 		generateComic,
 		retryFromStep,
 		retryFailedPanel,
+		regeneratePanel,
 		setError,
 		setCurrentStepText,
 		setStoryAnalysis,
@@ -205,6 +210,31 @@ export default function Home() {
 			`character-${character.name.toLowerCase().replace(/\s+/g, "-")}.jpg`,
 		);
 	};
+
+	// Handler for regenerating individual panels
+	const handleRegeneratePanel = useCallback(
+		async (panelNumber: number) => {
+			setRegeneratingPanels((prev) => new Set(prev).add(panelNumber));
+
+			try {
+				await regeneratePanel(panelNumber);
+				trackEvent({
+					action: "panel_regenerated",
+					category: "user_interaction",
+					label: `panel_${panelNumber}`,
+				});
+			} catch (error) {
+				console.error(`Failed to regenerate panel ${panelNumber}:`, error);
+			} finally {
+				setRegeneratingPanels((prev) => {
+					const newSet = new Set(prev);
+					newSet.delete(panelNumber);
+					return newSet;
+				});
+			}
+		},
+		[regeneratePanel],
+	);
 
 	// Enhanced modal handler with tracking
 	const handleOpenImageModal = useCallback(
@@ -1017,6 +1047,12 @@ export default function Home() {
 															showImage={true}
 															onImageClick={openImageModal}
 															onDownload={() => downloadPanel(generatedPanel)}
+															onRegenerate={() =>
+																handleRegeneratePanel(panel.panelNumber)
+															}
+															isRegenerating={regeneratingPanels.has(
+																panel.panelNumber,
+															)}
 														/>
 													);
 												} else {
