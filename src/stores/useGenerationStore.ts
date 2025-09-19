@@ -269,6 +269,7 @@ interface GenerationState {
 	// Store original inputs for retry functionality
 	originalStoryText: string;
 	originalStyle: ComicStyle;
+	originalNoDialogue: boolean;
 	originalUploadedCharacterReferences: UploadedCharacterReference[];
 	originalUploadedSettingReferences: UploadedSettingReference[];
 }
@@ -298,6 +299,7 @@ interface GenerationActions {
 	generateComic: (
 		storyText: string,
 		style: ComicStyle,
+		noDialogue: boolean,
 		uploadedCharacterReferences: UploadedCharacterReference[],
 		uploadedSettingReferences: UploadedSettingReference[],
 		startFromStep?: FailedStep,
@@ -331,6 +333,7 @@ const initialState: GenerationState = {
 	openAccordions: new Set<string>(),
 	originalStoryText: "",
 	originalStyle: "manga",
+	originalNoDialogue: false,
 	originalUploadedCharacterReferences: [],
 	originalUploadedSettingReferences: [],
 };
@@ -585,6 +588,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 			generateComic: async (
 				storyText,
 				style,
+				noDialogue,
 				uploadedCharacterReferences,
 				uploadedSettingReferences,
 				startFromStep = null,
@@ -609,6 +613,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 				set({
 					originalStoryText: storyText,
 					originalStyle: style,
+					originalNoDialogue: noDialogue,
 					originalUploadedCharacterReferences: uploadedCharacterReferences,
 					originalUploadedSettingReferences: uploadedSettingReferences,
 				});
@@ -739,6 +744,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 								characters: analysis.characters,
 								setting: analysis.setting,
 								style,
+								noDialogue,
 							}),
 						});
 
@@ -799,6 +805,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 									characterReferences,
 									analysis.setting,
 									style,
+									noDialogue,
 									uploadedSettingReferences,
 								);
 
@@ -881,6 +888,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 				await _get().generateComic(
 					state.originalStoryText,
 					state.originalStyle,
+					state.originalNoDialogue,
 					state.originalUploadedCharacterReferences || [],
 					state.originalUploadedSettingReferences || [],
 					step,
@@ -907,6 +915,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 				await _get().generateComic(
 					state.originalStoryText,
 					state.originalStyle,
+					state.originalNoDialogue,
 					state.originalUploadedCharacterReferences || [],
 					state.originalUploadedSettingReferences || [],
 					"panels",

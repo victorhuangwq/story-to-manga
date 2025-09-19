@@ -13,6 +13,7 @@ import type {
 interface UseAppInitializationProps {
 	setStory: (story: string) => void;
 	setStyle: (style: ComicStyle) => void;
+	setNoDialogue: (noDialogue: boolean) => void;
 	setStoryAnalysis: (analysis: StoryAnalysis | null) => void;
 	setCharacterReferences: (refs: CharacterReference[]) => Promise<void>;
 	setStoryBreakdown: (breakdown: StoryBreakdown | null) => void;
@@ -27,6 +28,7 @@ export function useAppInitialization(props: UseAppInitializationProps) {
 	const {
 		setStory,
 		setStyle,
+		setNoDialogue,
 		setStoryAnalysis,
 		setCharacterReferences,
 		setStoryBreakdown,
@@ -44,6 +46,7 @@ export function useAppInitialization(props: UseAppInitializationProps) {
 				if (savedState) {
 					setStory(savedState.story);
 					setStyle(savedState.style);
+					setNoDialogue(savedState.noDialogue);
 					setStoryAnalysis(savedState.storyAnalysis);
 					await setCharacterReferences(savedState.characterReferences);
 					setStoryBreakdown(savedState.storyBreakdown);
@@ -81,6 +84,7 @@ export function useAppInitialization(props: UseAppInitializationProps) {
 		setCharacterReferences,
 		setGeneratedPanels,
 		setIsLoadingState,
+		setNoDialogue,
 		setOpenAccordions,
 		setStory,
 		setStoryAnalysis,

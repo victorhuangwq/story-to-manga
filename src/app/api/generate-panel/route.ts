@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 			characterReferences,
 			setting,
 			style,
+			noDialogue = false,
 			uploadedSettingReferences = [],
 		} = await request.json();
 
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
 				character_refs_count: characterReferences?.length || 0,
 				uploaded_setting_refs_count: uploadedSettingReferences?.length || 0,
 				style,
+				noDialogue,
 			},
 			"Received panel generation request",
 		);
@@ -103,7 +105,7 @@ Create a single comic panel in ${stylePrefix}.
 Setting: ${setting.location}, ${setting.timePeriod}, mood: ${setting.mood}
 
 Panel Details:
-Panel ${panel.panelNumber}: ${panel.cameraAngle} shot of ${charactersInPanel}. Scene: ${panel.sceneDescription}. ${panel.dialogue ? `Dialogue: "${panel.dialogue}"` : "No dialogue."}. Mood: ${panel.visualMood}.
+Panel ${panel.panelNumber}: ${panel.cameraAngle} shot of ${charactersInPanel}. Scene: ${panel.sceneDescription}. ${noDialogue ? "NO DIALOGUE MODE - Focus on pure visual storytelling." : panel.dialogue ? `Dialogue: "${panel.dialogue}"` : "No dialogue."}. Mood: ${panel.visualMood}.
 
 IMPORTANT: Use the character reference images provided to maintain visual consistency. Each character should match their appearance from the reference images exactly.
 `;
@@ -118,8 +120,14 @@ IMPORTANT: Use the provided setting/environment reference images to guide the vi
 		prompt += `
 The panel should include:
 - Clear panel border
-- Speech bubbles with dialogue text (if any) - IMPORTANT: If dialogue includes character attribution like "Character: 'text'", only put the spoken text in the speech bubble, NOT the character name
-- Thought bubbles if needed
+${
+	noDialogue
+		? `- NO speech bubbles or dialogue text - pure visual storytelling only
+- Emphasize character expressions, body language, and visual details
+- Environmental storytelling without any text or speech`
+		: `- Speech bubbles with dialogue text (if any) - IMPORTANT: If dialogue includes character attribution like "Character: 'text'", only put the spoken text in the speech bubble, NOT the character name
+- Thought bubbles if needed`
+}
 - Sound effects where appropriate
 - Consistent character designs matching the references
 

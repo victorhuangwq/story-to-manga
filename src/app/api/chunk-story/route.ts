@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
 	logApiRequest(storyChunkingLogger, endpoint);
 
 	try {
-		const { story, characters, setting, style } = await request.json();
+		const { story, characters, setting, style, noDialogue } =
+			await request.json();
 
 		storyChunkingLogger.debug(
 			{
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
 				characters_count: characters?.length || 0,
 				style,
 				setting: !!setting,
+				noDialogue: !!noDialogue,
 			},
 			"Received story chunking request",
 		);
@@ -113,10 +115,15 @@ ${layoutGuidance}
 
 Create 2-15 panels based on the story's complexity and pacing needs. Choose the optimal number of panels to tell this story effectively - simple stories may need fewer panels (2-6), while complex narratives may require more (8-12).
 
+${
+	noDialogue
+		? `IMPORTANT: This is NO DIALOGUE MODE - do not include any dialogue, speech bubbles, or spoken words. Focus purely on visual storytelling through actions, expressions, and scene composition.`
+		: ""
+}
+
 For each panel, describe:
 - Characters present
-- Action/scene description
-- Dialogue (if any)
+- Action/scene description${noDialogue ? " (emphasize visual storytelling without dialogue)" : ""}${!noDialogue ? "\n- Dialogue (if any)" : ""}
 - Camera angle (close-up, medium shot, wide shot, etc.)
 - Visual mood/atmosphere
 

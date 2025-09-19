@@ -13,6 +13,7 @@ import type {
 interface UseAutoSaveProps {
 	story: string;
 	style: ComicStyle;
+	noDialogue: boolean;
 	storyAnalysis: StoryAnalysis | null;
 	storyBreakdown: StoryBreakdown | null;
 	characterReferences: CharacterReference[];
@@ -27,6 +28,7 @@ export function useAutoSave(props: UseAutoSaveProps) {
 	const {
 		story,
 		style,
+		noDialogue,
 		storyAnalysis,
 		storyBreakdown,
 		characterReferences,
@@ -46,6 +48,7 @@ export function useAutoSave(props: UseAutoSaveProps) {
 				await saveState(
 					story,
 					style,
+					noDialogue,
 					storyAnalysis,
 					storyBreakdown,
 					characterReferences,
@@ -74,6 +77,7 @@ export function useAutoSave(props: UseAutoSaveProps) {
 	}, [
 		story,
 		style,
+		noDialogue,
 		storyAnalysis,
 		storyBreakdown,
 		characterReferences,

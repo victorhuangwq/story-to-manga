@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev -p 8000",
+		"dev": "next dev -p 8000 --turbopack",
 		"build": "next build",
 		"start": "next start",
 		"lint": "biome check . --write",

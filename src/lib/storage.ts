@@ -22,6 +22,7 @@ interface PersistedState {
 	version: string;
 	story: string;
 	style: ComicStyle;
+	noDialogue: boolean;
 	storyAnalysis: StoryAnalysis | null;
 	storyBreakdown: StoryBreakdown | null;
 	characterReferences: Omit<CharacterReference, "image">[];
@@ -141,6 +142,7 @@ const imageStorage = new ImageStorage();
 export async function saveState(
 	story: string,
 	style: ComicStyle,
+	noDialogue: boolean,
 	storyAnalysis: StoryAnalysis | null,
 	storyBreakdown: StoryBreakdown | null,
 	characterReferences: CharacterReference[],
@@ -154,6 +156,7 @@ export async function saveState(
 			version: STORAGE_VERSION,
 			story,
 			style,
+			noDialogue,
 			storyAnalysis,
 			storyBreakdown,
 			characterReferences: characterReferences.map(
@@ -221,6 +224,7 @@ export async function saveState(
 export async function loadState(): Promise<{
 	story: string;
 	style: ComicStyle;
+	noDialogue: boolean;
 	storyAnalysis: StoryAnalysis | null;
 	storyBreakdown: StoryBreakdown | null;
 	characterReferences: CharacterReference[];
@@ -317,6 +321,7 @@ export async function loadState(): Promise<{
 		return {
 			story: textState.story,
 			style: textState.style,
+			noDialogue: textState.noDialogue || false,
 			storyAnalysis: textState.storyAnalysis,
 			storyBreakdown: textState.storyBreakdown,
 			characterReferences,

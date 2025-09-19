@@ -19,11 +19,13 @@ interface UseRedditIntegrationProps {
 	setStory: (story: string) => void;
 	showError: (message: string) => void;
 	style: ComicStyle;
+	noDialogue: boolean;
 	uploadedCharacterReferences: UploadedCharacterReference[];
 	uploadedSettingReferences: UploadedSettingReference[];
 	generateComic: (
 		story: string,
 		style: ComicStyle,
+		noDialogue: boolean,
 		charRefs: UploadedCharacterReference[],
 		settingRefs: UploadedSettingReference[],
 	) => Promise<void>;
@@ -38,6 +40,7 @@ export function useRedditIntegration(props: UseRedditIntegrationProps) {
 		setStory,
 		showError,
 		style,
+		noDialogue,
 		uploadedCharacterReferences,
 		uploadedSettingReferences,
 		generateComic,
@@ -72,6 +75,7 @@ export function useRedditIntegration(props: UseRedditIntegrationProps) {
 					await generateComic(
 						formattedStory,
 						style,
+						noDialogue,
 						uploadedCharacterReferences,
 						uploadedSettingReferences,
 					);
@@ -120,6 +124,7 @@ This will help ensure the story is processed correctly.`;
 		setStory,
 		showError,
 		style,
+		noDialogue,
 		uploadedCharacterReferences,
 		uploadedSettingReferences,
 		generateComic,
