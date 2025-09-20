@@ -805,7 +805,6 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 									characterReferences,
 									analysis.setting,
 									style,
-									noDialogue,
 									uploadedSettingReferences,
 								);
 
