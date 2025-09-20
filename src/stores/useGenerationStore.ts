@@ -321,7 +321,11 @@ interface GenerationActions {
 		panel: GeneratedPanel,
 	) => Promise<void>;
 	setError: (error: string | null) => void;
-	setErrorWithContext: (error: string | null, context?: string) => void;
+	setErrorWithContext: (
+		error: string | null,
+		context?: string,
+		retryCallback?: () => void,
+	) => void;
 	setFailedStep: (step: FailedStep) => void;
 	setFailedPanel: (panel: FailedPanel) => void;
 	setIsGenerating: (isGenerating: boolean) => void;
@@ -465,7 +469,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 			},
 			setError: (error) =>
 				set({ error, errorCategory: null, errorSuggestion: null }),
-			setErrorWithContext: (error, context) => {
+			setErrorWithContext: (error, context, retryCallback) => {
 				if (!error) {
 					set({ error: null, errorCategory: null, errorSuggestion: null });
 					return;
@@ -480,9 +484,9 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					errorSuggestion: suggestion,
 				});
 
-				// Also show error in modal
+				// Also show error in modal with retry callback
 				const uiStore = useUIStore.getState();
-				uiStore.showError(contextualError);
+				uiStore.showError(contextualError, retryCallback);
 
 				// Track error with additional context
 				trackError(
@@ -905,6 +909,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					_get().setErrorWithContext(
 						errorMessage,
 						currentStep ? `${currentStep} step failed` : "Generation",
+						currentStep ? () => _get().retryFromStep(currentStep) : undefined,
 					);
 					set({
 						isGenerating: false,
@@ -1030,6 +1035,7 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					_get().setErrorWithContext(
 						errorMessage,
 						"Character Regeneration Failed",
+						() => _get().regenerateCharacter(characterName),
 					);
 
 					trackError(
@@ -1127,7 +1133,11 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 							? error.message
 							: `Failed to regenerate panel ${panelNumber}`;
 
-					_get().setErrorWithContext(errorMessage, "Panel Regeneration Failed");
+					_get().setErrorWithContext(
+						errorMessage,
+						"Panel Regeneration Failed",
+						() => _get().regeneratePanel(panelNumber),
+					);
 
 					trackError(
 						"panel_regeneration_failed",

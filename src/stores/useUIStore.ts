@@ -7,6 +7,7 @@ interface UIState {
 	showConfirmClearModal: boolean;
 	showErrorModal: boolean;
 	errorModalMessage: string;
+	errorRetryCallback: (() => void) | null;
 
 	// Loading states
 	isDownloadingCharacters: boolean;
@@ -32,8 +33,9 @@ interface UIActions {
 	openImageModal: (imageUrl: string, altText: string) => void;
 	closeImageModal: () => void;
 	setShowConfirmClearModal: (show: boolean) => void;
-	showError: (message: string) => void;
+	showError: (message: string, retryCallback?: () => void) => void;
 	closeErrorModal: () => void;
+	clearErrorRetryCallback: () => void;
 
 	// Loading actions
 	setIsDownloadingCharacters: (isLoading: boolean) => void;
@@ -65,6 +67,7 @@ const initialState: UIState = {
 	showConfirmClearModal: false,
 	showErrorModal: false,
 	errorModalMessage: "",
+	errorRetryCallback: null,
 
 	// Loading states
 	isDownloadingCharacters: false,
@@ -101,16 +104,19 @@ export const useUIStore = create<UIState & UIActions>()((set) => ({
 		}),
 	setShowConfirmClearModal: (showConfirmClearModal) =>
 		set({ showConfirmClearModal }),
-	showError: (message) =>
+	showError: (message, retryCallback) =>
 		set({
 			showErrorModal: true,
 			errorModalMessage: message,
+			errorRetryCallback: retryCallback || null,
 		}),
 	closeErrorModal: () =>
 		set({
 			showErrorModal: false,
 			errorModalMessage: "",
+			errorRetryCallback: null,
 		}),
+	clearErrorRetryCallback: () => set({ errorRetryCallback: null }),
 
 	// Loading actions
 	setIsDownloadingCharacters: (isDownloadingCharacters) =>

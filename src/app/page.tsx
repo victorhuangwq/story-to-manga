@@ -135,6 +135,7 @@ export default function Home() {
 		showConfirmClearModal,
 		showErrorModal,
 		errorModalMessage,
+		errorRetryCallback,
 		isDownloadingCharacters,
 		isDownloadingPanels,
 		isGeneratingComposite,
@@ -1376,6 +1377,18 @@ export default function Home() {
 							</p>
 						</div>
 						<div className="confirmation-modal-actions">
+							{errorRetryCallback && (
+								<button
+									type="button"
+									className="btn-manga-outline"
+									onClick={() => {
+										errorRetryCallback();
+										closeErrorModal();
+									}}
+								>
+									Retry
+								</button>
+							)}
 							<button
 								type="button"
 								className="btn-manga-primary confirmation-modal-confirm"
