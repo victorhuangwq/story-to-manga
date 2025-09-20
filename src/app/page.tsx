@@ -70,6 +70,10 @@ export default function Home() {
 	const [regeneratingPanels, setRegeneratingPanels] = useState<Set<number>>(
 		new Set(),
 	);
+	// State for tracking which characters are being regenerated
+	const [regeneratingCharacters, setRegeneratingCharacters] = useState<
+		Set<string>
+	>(new Set());
 	const charactersHeadingId = useId();
 	const layoutHeadingId = useId();
 	const panelsHeadingId = useId();
@@ -109,6 +113,7 @@ export default function Home() {
 		retryFromStep,
 		retryFailedPanel,
 		regeneratePanel,
+		regenerateCharacter,
 		setError,
 		setCurrentStepText,
 		setStoryAnalysis,
@@ -236,6 +241,34 @@ export default function Home() {
 			}
 		},
 		[regeneratePanel],
+	);
+
+	// Handler for regenerating individual characters
+	const handleRegenerateCharacter = useCallback(
+		async (characterName: string) => {
+			setRegeneratingCharacters((prev) => new Set(prev).add(characterName));
+
+			try {
+				await regenerateCharacter(characterName);
+				trackEvent({
+					action: "character_regenerated",
+					category: "user_interaction",
+					label: `character_${characterName}`,
+				});
+			} catch (error) {
+				console.error(
+					`Failed to regenerate character ${characterName}:`,
+					error,
+				);
+			} finally {
+				setRegeneratingCharacters((prev) => {
+					const newSet = new Set(prev);
+					newSet.delete(characterName);
+					return newSet;
+				});
+			}
+		},
+		[regenerateCharacter],
 	);
 
 	// Enhanced modal handler with tracking
@@ -930,6 +963,10 @@ export default function Home() {
 													showImage={true}
 													onImageClick={openImageModal}
 													onDownload={() => downloadCharacter(char)}
+													onRegenerate={() =>
+														handleRegenerateCharacter(char.name)
+													}
+													isRegenerating={regeneratingCharacters.has(char.name)}
 												/>
 											))}
 										</div>

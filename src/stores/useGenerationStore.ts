@@ -109,6 +109,41 @@ class ImageStorage {
 // Single instance
 const imageStorage = new ImageStorage();
 
+// Reusable character generation helper to avoid code duplication
+const generateSingleCharacterWithApi = async (
+	characterData: {
+		name: string;
+		physicalDescription: string;
+		personality: string;
+		role: string;
+	},
+	setting: { timePeriod: string; location: string; mood: string },
+	style: ComicStyle,
+	uploadedCharacterReferences: UploadedCharacterReference[],
+): Promise<CharacterReference> => {
+	const response = await fetch("/api/generate-character-refs", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			characters: [characterData], // Singleton array
+			setting,
+			style,
+			uploadedCharacterReferences,
+		}),
+	});
+
+	if (!response.ok) {
+		const errorMessage = await handleApiError(
+			response,
+			`Failed to generate character ${characterData.name}`,
+		);
+		throw new Error(errorMessage);
+	}
+
+	const { characterReferences } = await response.json();
+	return characterReferences[0];
+};
+
 // Reusable panel generation helper to avoid code duplication
 const generateSinglePanelWithApi = async (
 	panelData: {
@@ -308,6 +343,11 @@ interface GenerationActions {
 	retryFromStep: (step: FailedStep) => Promise<void>;
 	retryFailedPanel: (panelNumber: number, panelIndex: number) => Promise<void>;
 	regeneratePanel: (panelNumber: number) => Promise<void>;
+	regenerateCharacter: (characterName: string) => Promise<void>;
+	updateCharacterReference: (
+		characterName: string,
+		newCharacter: CharacterReference,
+	) => Promise<void>;
 	// Utility actions
 	resetGeneration: () => void;
 	clearResults: () => void;
@@ -689,35 +729,44 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 						}
 
 						currentStep = "characters";
-						set({ currentStepText: "Creating character designs..." });
-						const charRefResponse = await fetch(
-							"/api/generate-character-refs",
-							{
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									characters: analysis.characters,
-									setting: analysis.setting,
+
+						// Generate characters one by one to show progress
+						characterReferences = [];
+						for (let i = 0; i < analysis.characters.length; i++) {
+							const character = analysis.characters[i];
+							if (!character) continue;
+
+							set({
+								currentStepText: `Creating character ${i + 1}/${analysis.characters.length}: ${character.name}...`,
+							});
+
+							try {
+								const generatedCharacter = await generateSingleCharacterWithApi(
+									character,
+									analysis.setting,
 									style,
 									uploadedCharacterReferences,
-								}),
-							},
-						);
+								);
 
-						if (!charRefResponse.ok) {
-							throw new Error(
-								await handleApiError(
-									charRefResponse,
-									"Failed to generate character references",
-								),
-							);
+								characterReferences.push(generatedCharacter);
+								await _get().setCharacterReferences([...characterReferences]);
+
+								// Auto-expand characters section after first character
+								if (i === 0) {
+									set({ openAccordions: new Set(["characters"]) });
+								}
+							} catch (error) {
+								const errorMessage =
+									error instanceof Error
+										? error.message
+										: `Failed to generate character ${character.name}`;
+								trackError(
+									"character_generation_failed",
+									`Character ${character.name}: ${errorMessage}`,
+								);
+								throw new Error(errorMessage);
+							}
 						}
-
-						const { characterReferences: newCharacterReferences } =
-							await charRefResponse.json();
-						characterReferences = newCharacterReferences;
-						await _get().setCharacterReferences(characterReferences);
-						set({ openAccordions: new Set(["characters"]) });
 					}
 
 					// Step 3: Break down story into panels (skip if we already have breakdown and not retrying from this step)
@@ -920,6 +969,103 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					"panels",
 					panelIndex,
 				);
+			},
+
+			regenerateCharacter: async (characterName) => {
+				const state = _get();
+
+				// Validate we have all required data
+				if (!state.storyAnalysis || !state.originalStyle) {
+					_get().setErrorWithContext(
+						"Missing required data for character regeneration. Please start generation from the beginning.",
+						"Character Regeneration Failed",
+					);
+					return;
+				}
+
+				// Find the character data from the analysis
+				const characterData = state.storyAnalysis.characters.find(
+					(c) => c.name === characterName,
+				);
+				if (!characterData) {
+					_get().setErrorWithContext(
+						`Character ${characterName} not found in story analysis.`,
+						"Character Regeneration Failed",
+					);
+					return;
+				}
+
+				trackEvent({
+					action: "regenerate_character",
+					category: "user_interaction",
+					label: `character_${characterName}`,
+				});
+
+				try {
+					// Generate the new character using our reusable helper
+					const generatedCharacter = await generateSingleCharacterWithApi(
+						characterData,
+						state.storyAnalysis.setting,
+						state.originalStyle,
+						state.originalUploadedCharacterReferences || [],
+					);
+
+					// Update the character in the store
+					await _get().updateCharacterReference(
+						characterName,
+						generatedCharacter,
+					);
+
+					trackEvent({
+						action: "regenerate_character_success",
+						category: "user_interaction",
+						label: `character_${characterName}`,
+					});
+				} catch (error) {
+					const errorMessage =
+						error instanceof Error
+							? error.message
+							: `Failed to regenerate character ${characterName}`;
+
+					_get().setErrorWithContext(
+						errorMessage,
+						"Character Regeneration Failed",
+					);
+
+					trackError(
+						"character_regeneration_failed",
+						`Character ${characterName}: ${errorMessage}`,
+					);
+				}
+			},
+
+			updateCharacterReference: async (characterName, newCharacter) => {
+				set((state) => {
+					const updatedCharacters = [...state.characterReferences];
+					const existingIndex = updatedCharacters.findIndex(
+						(c) => c.name === characterName,
+					);
+					if (existingIndex >= 0) {
+						updatedCharacters[existingIndex] = newCharacter;
+					} else {
+						updatedCharacters.push(newCharacter);
+					}
+					return { characterReferences: updatedCharacters };
+				});
+				try {
+					if (newCharacter.image) {
+						await imageStorage.init();
+						await imageStorage.storeImage(
+							`char-${newCharacter.name}`,
+							newCharacter.image,
+						);
+					}
+				} catch (error) {
+					console.warn(
+						`Failed to persist character ${newCharacter.name} image:`,
+						error,
+					);
+				}
 			},
 
 			regeneratePanel: async (panelNumber) => {
