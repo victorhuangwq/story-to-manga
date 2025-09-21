@@ -94,7 +94,7 @@ input[type="radio"]:checked + .btn-manga-outline {
 
 .style-manga .btn-manga-secondary:hover:not(:disabled) {
   background: var(--color-manga-black);
-  color: white;
+  color: white !important;
   transform: translateY(-1px);
 }
 
@@ -177,7 +177,7 @@ input[type="radio"]:checked + .btn-manga-outline {
 
 .style-comic .btn-manga-secondary:hover:not(:disabled) {
   background: var(--color-manga-black);
-  color: white;
+  color: white !important;
   transform: translateY(-1px);
 }
 
