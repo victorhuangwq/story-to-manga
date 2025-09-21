@@ -4,6 +4,8 @@ Transform your written stories into stunning visual manga or comic book pages us
 
 **🎨 Try it now at [app.storytomanga.com](https://app.storytomanga.com)**
 
+<a href="https://www.producthunt.com/products/story-to-manga?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-story&#0045;to&#0045;manga" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1018402&theme=light&t=1758439936135" alt="Story&#0032;to&#0032;Manga - Turn&#0032;any&#0032;short&#0032;story&#0032;into&#0032;manga&#0032;in&#0032;seconds&#0046; | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 *Built for the [Nano Banana Hackathon](https://www.kaggle.com/competitions/banana)* 🍌
 
 ## Screenshots
