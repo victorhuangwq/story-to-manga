@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { getGoogleAiApiKey } from "@/lib/api-keys";
-import { callGeminiWithRetry } from "@/lib/gemini-helper";
+import { prepareImageForBedrock } from "@/lib/bedrock-helper";
+import { type ApiResponse, callGeminiWithRetry } from "@/lib/gemini-helper";
 import {
 	characterGenLogger,
 	logApiRequest,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/logger";
 
 const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(false) });
-const model = "gemini-2.5-flash-image-preview";
+// Model will be determined dynamically by callGeminiWithRetry
 
 // Helper function to convert base64 to format expected by Gemini
 function prepareImageForGemini(base64Image: string) {
@@ -78,7 +79,6 @@ export async function POST(request: NextRequest) {
 
 		characterGenLogger.info(
 			{
-				model: model,
 				characters_to_generate: characters.length,
 			},
 			"Starting character reference generation",
@@ -148,15 +148,49 @@ The character should be drawn in a neutral pose against a plain background, show
 			}
 
 			try {
-				await callGeminiWithRetry(
-					async () => {
-						const result = await genAI.models.generateContent({
-							model: model,
-							contents: inputParts,
-						});
+				// Prepare Bedrock fallback parameters
+				const bedrockMessages = [
+					{
+						role: "user",
+						content: [
+							{ type: "text", text: prompt },
+							// Add reference images for Bedrock
+							...(
+								uploadedCharacterReferences as {
+									name: string;
+									image: string;
+									id: string;
+									fileName: string;
+								}[]
+							)
+								.filter((upload) => upload.image)
+								.map((upload) => ({
+									type: "image",
+									image: prepareImageForBedrock(upload.image),
+								})),
+						],
+					},
+				];
 
+				const response = await callGeminiWithRetry(
+					genAI,
+					inputParts,
+					undefined, // No config needed for image generation
+					(result) => {
 						// Process the response following the official pattern
-						const candidate = result.candidates?.[0];
+						const candidate = (
+							result as {
+								candidates?: Array<{
+									finishReason?: string;
+									content?: {
+										parts?: Array<{
+											text?: string;
+											inlineData?: { mimeType: string; data: string };
+										}>;
+									};
+								}>;
+							}
+						)?.candidates?.[0];
 
 						// Check for prohibited content finish reason
 						if (candidate?.finishReason === "PROHIBITED_CONTENT") {
@@ -218,8 +252,11 @@ The character should be drawn in a neutral pose against a plain background, show
 						if (!imageFound) {
 							throw new Error("No image data received in response parts");
 						}
+
+						return undefined; // This function doesn't need to return anything
 					},
 					characterGenLogger,
+					"image",
 					{
 						character_name: character.name,
 						prompt_length: prompt.length,
@@ -228,7 +265,67 @@ The character should be drawn in a neutral pose against a plain background, show
 						total_uploads: uploadedCharacterReferences.length,
 						input_parts_count: inputParts.length,
 					},
+					// Bedrock fallback parameters
+					{
+						messages: bedrockMessages,
+						maxTokens: 4096,
+						temperature: 0.7,
+					},
 				);
+
+				// Handle response based on source
+				if (typeof response === "object" && "source" in response) {
+					// Response from Bedrock fallback
+					const apiResponse = response as ApiResponse<unknown>;
+					characterGenLogger.info(
+						{
+							character_name: character.name,
+							source: apiResponse.source,
+						},
+						`Character reference generated using ${apiResponse.source}`,
+					);
+
+					if (apiResponse.source === "bedrock") {
+						// Handle Stability AI response
+						const stabilityResult = apiResponse.result;
+						if (
+							typeof stabilityResult === "object" &&
+							stabilityResult !== null &&
+							"image" in stabilityResult &&
+							typeof stabilityResult.image === "string"
+						) {
+							// Stability AI returned an image
+							characterReferences.push({
+								name: character.name,
+								image: stabilityResult.image,
+								description: character.physicalDescription,
+							});
+
+							characterGenLogger.info(
+								{
+									character_name: character.name,
+									image_size_kb: Math.round(
+										(stabilityResult.image.length * 0.75) / 1024,
+									),
+									duration_ms: Date.now() - characterStartTime,
+								},
+								"Successfully generated character reference with Stability AI",
+							);
+						} else {
+							throw new Error(
+								"Unexpected Bedrock response format for image generation",
+							);
+						}
+					}
+				} else {
+					characterGenLogger.info(
+						{
+							character_name: character.name,
+							source: "gemini",
+						},
+						"Character reference generated using gemini",
+					);
+				}
 			} catch (error) {
 				logError(characterGenLogger, error, "character reference generation", {
 					character_name: character.name,

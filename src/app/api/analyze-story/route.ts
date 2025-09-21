@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { getGoogleAiApiKey } from "@/lib/api-keys";
-import { callGeminiWithRetry } from "@/lib/gemini-helper";
+import { type ApiResponse, callGeminiWithRetry } from "@/lib/gemini-helper";
 import { parseGeminiJSON } from "@/lib/json-parser";
 import {
 	logApiRequest,
@@ -29,7 +29,7 @@ interface AnalysisData {
 }
 
 const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(true) });
-const model = "gemini-2.5-flash";
+// Model will be determined dynamically by callGeminiWithRetry
 
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
@@ -109,81 +109,107 @@ Please provide:
 
 		let text: string;
 		try {
-			text = await callGeminiWithRetry(
-				async () => {
-					const result = await genAI.models.generateContent({
-						model: model,
-						contents: prompt,
-						config: {
-							responseMimeType: "application/json",
-							responseSchema: {
+			// Prepare Bedrock fallback parameters
+
+			const response = await callGeminiWithRetry(
+				genAI,
+				prompt,
+				{
+					responseMimeType: "application/json",
+					responseSchema: {
+						type: Type.OBJECT,
+						properties: {
+							title: {
+								type: Type.STRING,
+							},
+							characters: {
+								type: Type.ARRAY,
+								items: {
+									type: Type.OBJECT,
+									properties: {
+										name: {
+											type: Type.STRING,
+										},
+										physicalDescription: {
+											type: Type.STRING,
+										},
+										personality: {
+											type: Type.STRING,
+										},
+										role: {
+											type: Type.STRING,
+										},
+									},
+									propertyOrdering: [
+										"name",
+										"physicalDescription",
+										"personality",
+										"role",
+									],
+								},
+							},
+							setting: {
 								type: Type.OBJECT,
 								properties: {
-									title: {
+									timePeriod: {
 										type: Type.STRING,
 									},
-									characters: {
-										type: Type.ARRAY,
-										items: {
-											type: Type.OBJECT,
-											properties: {
-												name: {
-													type: Type.STRING,
-												},
-												physicalDescription: {
-													type: Type.STRING,
-												},
-												personality: {
-													type: Type.STRING,
-												},
-												role: {
-													type: Type.STRING,
-												},
-											},
-											propertyOrdering: [
-												"name",
-												"physicalDescription",
-												"personality",
-												"role",
-											],
-										},
+									location: {
+										type: Type.STRING,
 									},
-									setting: {
-										type: Type.OBJECT,
-										properties: {
-											timePeriod: {
-												type: Type.STRING,
-											},
-											location: {
-												type: Type.STRING,
-											},
-											mood: {
-												type: Type.STRING,
-											},
-										},
-										propertyOrdering: ["timePeriod", "location", "mood"],
+									mood: {
+										type: Type.STRING,
 									},
 								},
-								propertyOrdering: ["title", "characters", "setting"],
+								propertyOrdering: ["timePeriod", "location", "mood"],
 							},
 						},
-					});
-
+						propertyOrdering: ["title", "characters", "setting"],
+					},
+				},
+				(result) => {
 					storyAnalysisLogger.debug(
 						{
-							response_length: result.text?.length || 0,
+							response_length: (result as { text?: string })?.text?.length || 0,
 						},
 						"Received response from Gemini API",
 					);
-
-					return result.text || "";
+					return (result as { text?: string })?.text || "";
 				},
 				storyAnalysisLogger,
+				"text",
 				{
-					model: model,
 					prompt_length: prompt.length,
 				},
+				// Bedrock fallback parameters
+				{
+					prompt: prompt,
+					maxTokens: 4096,
+					temperature: 0.7,
+				},
 			);
+
+			// Handle response based on source
+			if (typeof response === "object" && "source" in response) {
+				// Response from Bedrock or Gemini with source info
+				const apiResponse = response as ApiResponse<string>;
+				storyAnalysisLogger.info(
+					{
+						source: apiResponse.source,
+					},
+					`Story analysis completed using ${apiResponse.source}`,
+				);
+				text = apiResponse.result;
+			} else {
+				// Direct response from Gemini (backward compatibility)
+				text = response as string;
+				storyAnalysisLogger.info(
+					{
+						source: "gemini",
+					},
+					"Story analysis completed using gemini",
+				);
+			}
 		} catch (error) {
 			logError(storyAnalysisLogger, error, "story analysis");
 			logApiResponse(

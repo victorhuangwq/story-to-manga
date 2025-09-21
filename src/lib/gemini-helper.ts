@@ -1,4 +1,19 @@
+import type { GoogleGenAI } from "@google/genai";
 import type { Logger } from "pino";
+import { callBedrockWithRetry } from "./bedrock-helper";
+
+/**
+ * Gemini model constants (internal use only)
+ */
+const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
+const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image-preview";
+
+/**
+ * Gets the appropriate Gemini model based on generation type
+ */
+function getGeminiModel(generationType: "text" | "image"): string {
+	return generationType === "image" ? GEMINI_IMAGE_MODEL : GEMINI_TEXT_MODEL;
+}
 
 interface GeminiError {
 	error?: {
@@ -9,37 +24,110 @@ interface GeminiError {
 }
 
 /**
+ * Response from API call with source information
+ */
+export interface ApiResponse<T = string> {
+	result: T;
+	source: "gemini" | "bedrock";
+}
+
+/**
+ * Parameters for Bedrock fallback
+ */
+type BedrockFallbackParams =
+	| {
+			prompt: string;
+			maxTokens?: number;
+			temperature?: number;
+			topP?: number;
+	  }
+	| {
+			messages: Array<{
+				role: string;
+				content: Array<{
+					type: string;
+					text?: string;
+					image?: {
+						format: string;
+						source: {
+							bytes: string;
+						};
+					};
+				}>;
+			}>;
+			maxTokens?: number;
+			temperature?: number;
+			topP?: number;
+	  };
+
+/**
  * Wrapper function that calls Gemini API with retry logic for transient failures
+ * Falls back to Bedrock if Gemini fails with non-retryable errors
  */
 export async function callGeminiWithRetry<T>(
-	apiCall: () => Promise<T>,
+	genAI: GoogleGenAI,
+	contents:
+		| string
+		| Array<
+				{ text: string } | { inlineData: { data: string; mimeType: string } }
+		  >,
+	config: Record<string, unknown> | undefined,
+	processResponse: (result: unknown) => T,
 	logger: Logger,
+	generationType: "text" | "image",
 	context: Record<string, unknown> = {},
-): Promise<T> {
+	bedrockFallback?: BedrockFallbackParams,
+): Promise<T | ApiResponse<T>> {
 	const startTime = Date.now();
+
+	// Use the explicitly specified generation type to determine model
+	const model = getGeminiModel(generationType);
 
 	const attemptCall = async (attemptNumber: number): Promise<T> => {
 		logger.debug(
 			{
 				...context,
 				attempt: attemptNumber,
+				model: model,
+				contentType: typeof contents === "string" ? "text" : "multipart",
 			},
 			"Calling Gemini API",
 		);
 
 		try {
-			const result = await apiCall();
+			const generateParams: {
+				model: string;
+				contents:
+					| string
+					| Array<
+							| { text: string }
+							| { inlineData: { data: string; mimeType: string } }
+					  >;
+				config?: Record<string, unknown>;
+			} = {
+				model: model,
+				contents: contents,
+			};
+
+			if (config) {
+				generateParams.config = config;
+			}
+
+			const result = await genAI.models.generateContent(generateParams);
+
+			const processedResult = processResponse(result);
 
 			logger.debug(
 				{
 					...context,
 					attempt: attemptNumber,
+					model: model,
 					duration_ms: Date.now() - startTime,
 				},
 				"Gemini API call successful",
 			);
 
-			return result;
+			return processedResult;
 		} catch (error) {
 			// Add attempt info to the error for logging
 			if (error instanceof Error) {
@@ -47,6 +135,7 @@ export async function callGeminiWithRetry<T>(
 					{
 						...context,
 						attempt: attemptNumber,
+						model: model,
 						error_message: error.message,
 						error_cause: error.cause,
 						error_name: error.name,
@@ -61,6 +150,7 @@ export async function callGeminiWithRetry<T>(
 					{
 						...context,
 						attempt: attemptNumber,
+						model: model,
 						error_type: typeof error,
 						error_value: error,
 						duration_ms: Date.now() - startTime,
@@ -75,7 +165,12 @@ export async function callGeminiWithRetry<T>(
 	try {
 		// Try first attempt
 		try {
-			return await attemptCall(1);
+			const result = await attemptCall(1);
+			// Return successful Gemini result
+			return {
+				result: result,
+				source: "gemini",
+			} as ApiResponse<T>;
 		} catch (error) {
 			const shouldRetry = isRetryableError(error);
 
@@ -83,6 +178,7 @@ export async function callGeminiWithRetry<T>(
 				logger.warn(
 					{
 						...context,
+						model: model,
 						error_message:
 							error instanceof Error ? error.message : "Unknown error",
 						error_cause: error instanceof Error ? error.cause : undefined,
@@ -98,11 +194,17 @@ export async function callGeminiWithRetry<T>(
 				await new Promise((resolve) => setTimeout(resolve, 1500));
 
 				try {
-					return await attemptCall(2);
+					const retryResult = await attemptCall(2);
+					// Return successful Gemini retry result
+					return {
+						result: retryResult,
+						source: "gemini",
+					} as ApiResponse<T>;
 				} catch (retryError) {
 					logger.error(
 						{
 							...context,
+							model: model,
 							original_error:
 								error instanceof Error ? error.message : "Unknown error",
 							retry_error:
@@ -116,15 +218,113 @@ export async function callGeminiWithRetry<T>(
 					throw retryError;
 				}
 			} else {
-				// Re-throw non-retryable errors immediately
+				// Try Bedrock fallback for non-retryable errors
+				if (bedrockFallback) {
+					logger.warn(
+						{
+							...context,
+							model: model,
+							error_message:
+								error instanceof Error ? error.message : "Unknown error",
+							duration_ms: Date.now() - startTime,
+						},
+						"Gemini failed with non-retryable error, attempting Bedrock fallback",
+					);
+					try {
+						const bedrockResult = await callBedrockWithRetry(
+							bedrockFallback,
+							logger,
+							generationType,
+							context,
+						);
+						logger.info(
+							{
+								...context,
+								duration_ms: Date.now() - startTime,
+							},
+							"Bedrock fallback successful",
+						);
+						return {
+							result: bedrockResult as T,
+							source: "bedrock",
+						} as ApiResponse<T>;
+					} catch (bedrockError) {
+						logger.error(
+							{
+								...context,
+								model: model,
+								original_error:
+									error instanceof Error ? error.message : "Unknown error",
+								bedrock_error:
+									bedrockError instanceof Error
+										? bedrockError.message
+										: "Unknown error",
+								duration_ms: Date.now() - startTime,
+							},
+							"Both Gemini and Bedrock failed",
+						);
+						throw error; // Throw original Gemini error
+					}
+				}
+				// Re-throw non-retryable errors immediately if no fallback
 				throw error;
 			}
 		}
 	} catch (error) {
-		// Final error handling
+		// Try Bedrock fallback if available and this wasn't already a fallback attempt
+		if (bedrockFallback && !("__bedrockAttempted" in (error as object))) {
+			logger.warn(
+				{
+					...context,
+					model: model,
+					error_message:
+						error instanceof Error ? error.message : "Unknown error",
+					duration_ms: Date.now() - startTime,
+				},
+				"Gemini retry attempts failed, attempting Bedrock fallback",
+			);
+			try {
+				const bedrockResult = await callBedrockWithRetry(
+					bedrockFallback,
+					logger,
+					generationType,
+					context,
+				);
+				logger.info(
+					{
+						...context,
+						duration_ms: Date.now() - startTime,
+					},
+					"Bedrock fallback successful after Gemini retry failure",
+				);
+				return {
+					result: bedrockResult as T,
+					source: "bedrock",
+				} as ApiResponse<T>;
+			} catch (bedrockError) {
+				logger.error(
+					{
+						...context,
+						model: model,
+						original_error:
+							error instanceof Error ? error.message : "Unknown error",
+						bedrock_error:
+							bedrockError instanceof Error
+								? bedrockError.message
+								: "Unknown error",
+						duration_ms: Date.now() - startTime,
+					},
+					"Both Gemini retries and Bedrock fallback failed",
+				);
+				throw error; // Throw original Gemini error
+			}
+		}
+
+		// Final error handling - no fallback available or fallback already attempted
 		logger.error(
 			{
 				...context,
+				model: model,
 				error_message: error instanceof Error ? error.message : "Unknown error",
 				error_cause: error instanceof Error ? error.cause : undefined,
 				duration_ms: Date.now() - startTime,

@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { getGoogleAiApiKey } from "@/lib/api-keys";
-import { callGeminiWithRetry } from "@/lib/gemini-helper";
+import { prepareImageForBedrock } from "@/lib/bedrock-helper";
+import { type ApiResponse, callGeminiWithRetry } from "@/lib/gemini-helper";
 import {
 	logApiRequest,
 	logApiResponse,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/logger";
 
 const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(false) });
-const model = "gemini-2.5-flash-image-preview";
+// Model will be determined dynamically by callGeminiWithRetry
 
 // Helper function to convert base64 to format expected by Gemini
 function prepareImageForGemini(base64Image: string) {
@@ -155,7 +156,6 @@ Generate a single comic panel image with proper framing and composition.
 
 		panelLogger.info(
 			{
-				model: model,
 				panel_number: panel.panelNumber,
 				prompt_length: prompt.length,
 				character_refs_attached: characterReferences.length,
@@ -166,13 +166,34 @@ Generate a single comic panel image with proper framing and composition.
 		);
 
 		try {
-			const generatedPanel = await callGeminiWithRetry(
-				async () => {
-					const result = await genAI.models.generateContent({
-						model: model,
-						contents: inputParts,
-					});
+			// Prepare Bedrock fallback parameters
+			const bedrockMessages = [
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: prompt },
+						// Add images for Bedrock
+						...characterReferences
+							.filter((charRef: { image?: string }) => charRef.image)
+							.map((charRef: { image: string }) => ({
+								type: "image",
+								image: prepareImageForBedrock(charRef.image),
+							})),
+						...uploadedSettingReferences
+							.filter((settingRef: { image?: string }) => settingRef.image)
+							.map((settingRef: { image: string }) => ({
+								type: "image",
+								image: prepareImageForBedrock(settingRef.image),
+							})),
+					],
+				},
+			];
 
+			const response = await callGeminiWithRetry(
+				genAI,
+				inputParts,
+				undefined, // No config needed for image generation
+				(result) => {
 					panelLogger.debug(
 						{
 							panel_number: panel.panelNumber,
@@ -181,7 +202,19 @@ Generate a single comic panel image with proper framing and composition.
 					);
 
 					// Process the response following the official pattern
-					const candidate = result.candidates?.[0];
+					const candidate = (
+						result as {
+							candidates?: Array<{
+								finishReason?: string;
+								content?: {
+									parts?: Array<{
+										text?: string;
+										inlineData?: { mimeType: string; data: string };
+									}>;
+								};
+							}>;
+						}
+					)?.candidates?.[0];
 
 					// Check for prohibited content finish reason
 					if (candidate?.finishReason === "PROHIBITED_CONTENT") {
@@ -240,6 +273,7 @@ Generate a single comic panel image with proper framing and composition.
 					throw new Error("No image data received in response parts");
 				},
 				panelLogger,
+				"image",
 				{
 					panel_number: panel.panelNumber,
 					prompt_length: prompt.length,
@@ -247,13 +281,79 @@ Generate a single comic panel image with proper framing and composition.
 					uploaded_setting_refs_attached: uploadedSettingReferences.length,
 					input_parts_count: inputParts.length,
 				},
+				// Bedrock fallback parameters
+				{
+					messages: bedrockMessages,
+					maxTokens: 4096,
+					temperature: 0.7,
+				},
 			);
+
+			// Handle response based on source
+			interface GeneratedPanel {
+				panelNumber: number;
+				image: string;
+				imageData?: string | undefined;
+				mimeType?: string | undefined;
+			}
+
+			let generatedPanel: GeneratedPanel;
+			if (typeof response === "object" && "source" in response) {
+				// Response from Bedrock fallback
+				const apiResponse = response as ApiResponse<GeneratedPanel>;
+				panelLogger.info(
+					{
+						panel_number: panel.panelNumber,
+						source: apiResponse.source,
+						duration_ms: Date.now() - startTime,
+					},
+					`Panel generated using ${apiResponse.source}`,
+				);
+
+				if (apiResponse.source === "bedrock") {
+					// Handle Stability AI response
+					const stabilityResult = apiResponse.result;
+					if (
+						typeof stabilityResult === "object" &&
+						stabilityResult !== null &&
+						"image" in stabilityResult &&
+						typeof stabilityResult.image === "string"
+					) {
+						// Stability AI returned an image
+						generatedPanel = {
+							panelNumber: panel.panelNumber,
+							image: stabilityResult.image,
+						};
+					} else {
+						throw new Error(
+							"Unexpected Bedrock response format for image generation",
+						);
+					}
+				} else {
+					generatedPanel = apiResponse.result;
+				}
+			} else {
+				// Direct response from Gemini
+				generatedPanel = response;
+				panelLogger.info(
+					{
+						panel_number: panel.panelNumber,
+						source: "gemini",
+						duration_ms: Date.now() - startTime,
+					},
+					"Panel generated using gemini",
+				);
+			}
 
 			logApiResponse(panelLogger, endpoint, true, Date.now() - startTime, {
 				panel_number: generatedPanel.panelNumber,
 				image_size_kb: generatedPanel.imageData
 					? Math.round((generatedPanel.imageData.length * 0.75) / 1024)
 					: 0,
+				source:
+					typeof response === "object" && "source" in response
+						? (response as ApiResponse<GeneratedPanel>).source
+						: "gemini",
 			});
 
 			return NextResponse.json({

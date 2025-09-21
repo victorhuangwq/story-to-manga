@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type NextRequest, NextResponse } from "next/server";
 import { getGoogleAiApiKey } from "@/lib/api-keys";
-import { callGeminiWithRetry } from "@/lib/gemini-helper";
+import { type ApiResponse, callGeminiWithRetry } from "@/lib/gemini-helper";
 import { parseGeminiJSON } from "@/lib/json-parser";
 import {
 	logApiRequest,
@@ -24,7 +24,7 @@ interface StoryBreakdown {
 }
 
 const genAI = new GoogleGenAI({ apiKey: getGoogleAiApiKey(true) });
-const model = "gemini-2.5-flash";
+// Model will be determined dynamically by callGeminiWithRetry
 
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
@@ -132,78 +132,104 @@ Return as a flat array of panels with sequential panel numbers.
 
 		let text: string;
 		try {
-			text = await callGeminiWithRetry(
-				async () => {
-					const result = await genAI.models.generateContent({
-						model: model,
-						contents: prompt,
-						config: {
-							thinkingConfig: {
-								thinkingBudget: 8192, // Give model time to think through panel layout
-							},
-							responseMimeType: "application/json",
-							responseSchema: {
-								type: Type.OBJECT,
-								properties: {
-									panels: {
-										type: Type.ARRAY,
-										items: {
-											type: Type.OBJECT,
-											properties: {
-												panelNumber: {
-													type: Type.NUMBER,
-												},
-												characters: {
-													type: Type.ARRAY,
-													items: {
-														type: Type.STRING,
-													},
-												},
-												sceneDescription: {
-													type: Type.STRING,
-												},
-												dialogue: {
-													type: Type.STRING,
-												},
-												cameraAngle: {
-													type: Type.STRING,
-												},
-												visualMood: {
-													type: Type.STRING,
-												},
+			// Prepare Bedrock fallback parameters
+
+			const response = await callGeminiWithRetry(
+				genAI,
+				prompt,
+				{
+					thinkingConfig: {
+						thinkingBudget: 8192, // Give model time to think through panel layout
+					},
+					responseMimeType: "application/json",
+					responseSchema: {
+						type: Type.OBJECT,
+						properties: {
+							panels: {
+								type: Type.ARRAY,
+								items: {
+									type: Type.OBJECT,
+									properties: {
+										panelNumber: {
+											type: Type.NUMBER,
+										},
+										characters: {
+											type: Type.ARRAY,
+											items: {
+												type: Type.STRING,
 											},
-											propertyOrdering: [
-												"panelNumber",
-												"characters",
-												"sceneDescription",
-												"dialogue",
-												"cameraAngle",
-												"visualMood",
-											],
+										},
+										sceneDescription: {
+											type: Type.STRING,
+										},
+										dialogue: {
+											type: Type.STRING,
+										},
+										cameraAngle: {
+											type: Type.STRING,
+										},
+										visualMood: {
+											type: Type.STRING,
 										},
 									},
+									propertyOrdering: [
+										"panelNumber",
+										"characters",
+										"sceneDescription",
+										"dialogue",
+										"cameraAngle",
+										"visualMood",
+									],
 								},
-								propertyOrdering: ["panels"],
 							},
 						},
-					});
-
+						propertyOrdering: ["panels"],
+					},
+				},
+				(result) => {
 					storyChunkingLogger.debug(
 						{
-							response_length: result.text?.length || 0,
+							response_length: (result as { text?: string })?.text?.length || 0,
 						},
 						"Received response from Gemini API",
 					);
-
-					return result.text || "";
+					return (result as { text?: string })?.text || "";
 				},
 				storyChunkingLogger,
+				"text",
 				{
-					model: model,
 					prompt_length: prompt.length,
 					layout_guidance_type: style,
 				},
+				// Bedrock fallback parameters
+				{
+					prompt: prompt,
+					maxTokens: 4096,
+					temperature: 0.7,
+				},
 			);
+
+			// Handle response based on source
+			if (typeof response === "object" && "source" in response) {
+				// Response from Bedrock or Gemini with source info
+				const apiResponse = response as ApiResponse<string>;
+				storyChunkingLogger.info(
+					{
+						source: apiResponse.source,
+					},
+					`Story chunking completed using ${apiResponse.source}`,
+				);
+				text = apiResponse.result;
+			} else {
+				// Direct response from Gemini (backward compatibility)
+				text = response as string;
+				storyChunkingLogger.info(
+					{
+						source: "gemini",
+					},
+					"Story chunking completed using gemini",
+				);
+			}
 		} catch (error) {
 			logError(storyChunkingLogger, error, "story chunking");
 			logApiResponse(

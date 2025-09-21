@@ -512,16 +512,8 @@ export default function Home() {
 							/>
 						</div>
 						<p className="text-center text-manga-medium-gray mb-4">
-							Transform stories into comics with{" "}
-							<a
-								href="https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-image-preview"
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-manga-info hover:underline"
-							>
-								Nano Banana (Gemini 2.5 Flash Image)
-							</a>
-							. Write your story and watch it come to life!
+							Transform stories into manga and comics with AI. Write your story
+							and watch it come to life!
 						</p>
 
 						{/* Style Selection */}
