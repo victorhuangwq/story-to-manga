@@ -18,7 +18,11 @@ import type {
 } from "@/types";
 
 type FailedStep = "analysis" | "characters" | "layout" | "panels" | null;
-type FailedPanel = { step: "panel"; panelNumber: number } | null;
+type FailedPanel = {
+	step: "panel";
+	panelNumber: number;
+	panelIndex: number;
+} | null;
 
 // IndexedDB setup for images
 const DB_NAME = "MangaGeneratorDB";
@@ -889,7 +893,13 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 									"panel_generation_failed",
 									`Panel ${i + 1}: ${errorMessage}`,
 								);
-								set({ failedPanel: { step: "panel", panelNumber: i + 1 } });
+								set({
+									failedPanel: {
+										step: "panel",
+										panelNumber: i + 1,
+										panelIndex: i,
+									},
+								});
 								throw error;
 							}
 						}
@@ -906,10 +916,19 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					const errorMessage =
 						error instanceof Error ? error.message : "Generation failed";
 
+					const state = _get();
 					_get().setErrorWithContext(
 						errorMessage,
 						currentStep ? `${currentStep} step failed` : "Generation",
-						currentStep ? () => _get().retryFromStep(currentStep) : undefined,
+						currentStep === "panels" && state.failedPanel
+							? () =>
+									_get().retryFailedPanel(
+										state.failedPanel!.panelNumber,
+										state.failedPanel!.panelIndex,
+									)
+							: currentStep
+								? () => _get().retryFromStep(currentStep)
+								: undefined,
 					);
 					set({
 						isGenerating: false,
@@ -931,21 +950,56 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					return;
 				}
 
+				// Set appropriate loading state based on step
+				const uiStore = useUIStore.getState();
+				switch (step) {
+					case "analysis":
+						uiStore.setIsRerunningAnalysis(true);
+						break;
+					case "characters":
+						uiStore.setIsRerunningCharacters(true);
+						break;
+					case "layout":
+						uiStore.setIsRerunningLayout(true);
+						break;
+					case "panels":
+						uiStore.setIsRerunningPanels(true);
+						break;
+				}
+
 				trackEvent({
 					action: "retry_from_step",
 					category: "user_interaction",
 					label: step,
 				});
 
-				// Use the main generation flow starting from the specified step
-				await _get().generateComic(
-					state.originalStoryText,
-					state.originalStyle,
-					state.originalNoDialogue,
-					state.originalUploadedCharacterReferences || [],
-					state.originalUploadedSettingReferences || [],
-					step,
-				);
+				try {
+					// Use the main generation flow starting from the specified step
+					await _get().generateComic(
+						state.originalStoryText,
+						state.originalStyle,
+						state.originalNoDialogue,
+						state.originalUploadedCharacterReferences || [],
+						state.originalUploadedSettingReferences || [],
+						step,
+					);
+				} finally {
+					// Clear loading state regardless of success or failure
+					switch (step) {
+						case "analysis":
+							uiStore.setIsRerunningAnalysis(false);
+							break;
+						case "characters":
+							uiStore.setIsRerunningCharacters(false);
+							break;
+						case "layout":
+							uiStore.setIsRerunningLayout(false);
+							break;
+						case "panels":
+							uiStore.setIsRerunningPanels(false);
+							break;
+					}
+				}
 			},
 
 			retryFailedPanel: async (panelNumber, panelIndex) => {
@@ -958,22 +1012,31 @@ export const useGenerationStore = create<GenerationState & GenerationActions>()(
 					return;
 				}
 
+				// Set loading state for panels
+				const uiStore = useUIStore.getState();
+				uiStore.setIsRerunningPanels(true);
+
 				trackEvent({
 					action: "retry_failed_panel",
 					category: "user_interaction",
 					label: `panel_${panelNumber}`,
 				});
 
-				// Use the main generation flow starting from the failed panel
-				await _get().generateComic(
-					state.originalStoryText,
-					state.originalStyle,
-					state.originalNoDialogue,
-					state.originalUploadedCharacterReferences || [],
-					state.originalUploadedSettingReferences || [],
-					"panels",
-					panelIndex,
-				);
+				try {
+					// Use the main generation flow starting from the failed panel
+					await _get().generateComic(
+						state.originalStoryText,
+						state.originalStyle,
+						state.originalNoDialogue,
+						state.originalUploadedCharacterReferences || [],
+						state.originalUploadedSettingReferences || [],
+						"panels",
+						panelIndex,
+					);
+				} finally {
+					// Clear loading state regardless of success or failure
+					uiStore.setIsRerunningPanels(false);
+				}
 			},
 
 			regenerateCharacter: async (characterName) => {

@@ -194,6 +194,17 @@ export default function Home() {
 		return { isCompleted: false, isInProgress: true };
 	};
 
+	// Helper function for character status logic
+	const getCharacterStatus = () => {
+		const expectedCount = storyAnalysis?.characters.length || 0;
+		const currentCount = characterReferences.length;
+
+		if (currentCount === 0) return { isCompleted: false, isInProgress: false };
+		if (currentCount === expectedCount && expectedCount > 0)
+			return { isCompleted: true, isInProgress: false };
+		return { isCompleted: false, isInProgress: true };
+	};
+
 	const wordCount = story
 		.trim()
 		.split(/\s+/)
@@ -925,43 +936,93 @@ export default function Home() {
 								id={charactersHeadingId}
 								title="Character Designs"
 								stepNumber={2}
-								isCompleted={characterReferences.length > 0}
+								isCompleted={getCharacterStatus().isCompleted}
 								isInProgress={
-									isGenerating &&
-									!!storyAnalysis &&
-									characterReferences.length === 0 &&
-									currentStepText.includes("character")
+									getCharacterStatus().isInProgress ||
+									(isGenerating &&
+										!!storyAnalysis &&
+										currentStepText.includes("character"))
 								}
 								isOpen={openAccordions.has("characters")}
 								onToggle={() => toggleAccordionSection("characters")}
 								showStatus={isGenerating || characterReferences.length > 0}
 							>
-								{characterReferences.length > 0 ? (
-									<div className="character-grid">
+								{storyAnalysis ? (
+									<div>
 										<div className="flex justify-between items-center mb-3">
 											<h5 className="font-semibold">Character Designs</h5>
-											<DownloadButton
-												onClick={() => downloadCharacters(characterReferences)}
-												isLoading={isDownloadingCharacters}
-												label="Download All Characters"
-												loadingText="Creating zip..."
-												variant="outline"
-											/>
+											{characterReferences.length > 0 && (
+												<DownloadButton
+													onClick={() =>
+														downloadCharacters(characterReferences)
+													}
+													isLoading={isDownloadingCharacters}
+													label="Download All Characters"
+													loadingText="Creating zip..."
+													variant="outline"
+												/>
+											)}
 										</div>
 										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-											{characterReferences.map((char) => (
-												<CharacterCard
-													key={char.name}
-													character={char}
-													showImage={true}
-													onImageClick={openImageModal}
-													onDownload={() => downloadCharacter(char)}
-													onRegenerate={() =>
-														handleRegenerateCharacter(char.name)
-													}
-													isRegenerating={regeneratingCharacters.has(char.name)}
-												/>
-											))}
+											{storyAnalysis.characters.map((expectedChar) => {
+												const generatedChar = characterReferences.find(
+													(c) => c.name === expectedChar.name,
+												);
+												const isCurrentlyGenerating =
+													isGenerating &&
+													currentStepText.includes("character") &&
+													currentStepText.includes(expectedChar.name);
+
+												if (generatedChar) {
+													// Show completed character with image
+													return (
+														<CharacterCard
+															key={expectedChar.name}
+															character={generatedChar}
+															showImage={true}
+															onImageClick={openImageModal}
+															onDownload={() =>
+																downloadCharacter(generatedChar)
+															}
+															onRegenerate={() =>
+																handleRegenerateCharacter(generatedChar.name)
+															}
+															isRegenerating={regeneratingCharacters.has(
+																generatedChar.name,
+															)}
+														/>
+													);
+												} else {
+													// Show placeholder for pending/generating character
+													return (
+														<div
+															key={`placeholder-${expectedChar.name}`}
+															className={`card-manga ${isCurrentlyGenerating ? "animate-pulse" : ""} border-dashed border-2 border-manga-medium-gray/50 bg-manga-medium-gray/10`}
+														>
+															<div className="card-body text-center py-8">
+																{isCurrentlyGenerating ? (
+																	<>
+																		<div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-manga-black mb-2"></div>
+																		<h6 className="card-title">
+																			Generating {expectedChar.name}...
+																		</h6>
+																	</>
+																) : (
+																	<h6 className="card-title text-manga-medium-gray">
+																		{expectedChar.name}
+																	</h6>
+																)}
+																<p className="card-text text-sm text-manga-medium-gray/80 mt-2">
+																	{expectedChar.physicalDescription}
+																</p>
+																<p className="card-text text-xs text-manga-medium-gray/60">
+																	<em>{expectedChar.role}</em>
+																</p>
+															</div>
+														</div>
+													);
+												}
+											})}
 										</div>
 										<div className="mt-3">
 											<RerunButton
