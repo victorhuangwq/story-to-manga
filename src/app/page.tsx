@@ -579,32 +579,6 @@ export default function Home() {
 							</fieldset>
 						</div>
 
-						{/* No Dialogue Option */}
-						<div className="mb-4">
-							<label className="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									className="form-checkbox h-4 w-4 text-manga-black"
-									checked={noDialogue}
-									onChange={(e) => {
-										setNoDialogue(e.target.checked);
-										trackEvent({
-											action: "toggle_no_dialogue",
-											category: "user_interaction",
-											label: e.target.checked ? "enabled" : "disabled",
-										});
-									}}
-								/>
-								<span className="text-manga-black font-medium">
-									No Dialogue Mode
-								</span>
-							</label>
-							<p className="text-sm text-manga-medium-gray mt-1">
-								Generate panels without speech bubbles for pure visual
-								storytelling
-							</p>
-						</div>
-
 						{/* Story Input */}
 						<div className="mb-4">
 							<label
@@ -652,6 +626,32 @@ export default function Home() {
 									Story is too long. Please reduce to 500 words or less.
 								</div>
 							)}
+						</div>
+
+						{/* No Dialogue Option */}
+						<div className="mb-4">
+							<label className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									className="form-checkbox h-4 w-4 text-manga-black"
+									checked={noDialogue}
+									onChange={(e) => {
+										setNoDialogue(e.target.checked);
+										trackEvent({
+											action: "toggle_no_dialogue",
+											category: "user_interaction",
+											label: e.target.checked ? "enabled" : "disabled",
+										});
+									}}
+								/>
+								<span className="text-manga-black font-medium">
+									No Dialogue Mode
+								</span>
+							</label>
+							<p className="text-sm text-manga-medium-gray mt-1">
+								Generate panels without speech bubbles for pure visual
+								storytelling
+							</p>
 						</div>
 
 						{/* Reference Images Upload - Optional */}
