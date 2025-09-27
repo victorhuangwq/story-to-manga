@@ -5,29 +5,51 @@ import "../styles/manga-theme.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-	metadataBase: new URL("https://storytomanga.com"),
-	title: "Story to Manga Machine",
-	description: "Transform stories into manga and comic pages with AI",
+	metadataBase: new URL("https://app.storytomanga.com"),
+	title: {
+		default: "Story to Manga Machine - AI Comic & Manga Generator",
+		template: "%s | Story to Manga Machine"
+	},
+	description: "Transform written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API. Create consistent characters, generate panels, and share your comics instantly.",
+	keywords: ["manga generator", "comic book creator", "AI comics", "story to manga", "visual storytelling", "Gemini AI", "comic panels", "character design"],
+	authors: [{ name: "Story to Manga Team" }],
+	creator: "Story to Manga Machine",
+	publisher: "Story to Manga Machine",
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+		},
+	},
 	openGraph: {
-		title: "Story to Manga",
-		description: "Transform stories into manga and comic pages with AI",
-		url: "https://storytomanga.com",
+		title: "Story to Manga Machine - AI Comic & Manga Generator",
+		description: "Transform written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API. Create consistent characters, generate panels, and share your comics instantly.",
+		url: "https://app.storytomanga.com",
+		siteName: "Story to Manga Machine",
 		images: [
 			{
 				url: "/og-image.png",
 				width: 1200,
 				height: 630,
-				alt: "Story to Manga - Transform stories into manga",
+				alt: "Story to Manga Machine - Transform stories into manga and comics with AI",
 			},
 		],
 		type: "website",
+		locale: "en_US",
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "Story to Manga",
-		description: "Transform stories into manga and comic pages with AI",
+		title: "Story to Manga Machine - AI Comic & Manga Generator",
+		description: "Transform written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API.",
 		images: ["/og-image.png"],
+		site: "@storytomanga",
 	},
+	alternates: {
+		canonical: "https://app.storytomanga.com",
+	},
+	category: "entertainment",
 };
 
 export default function RootLayout({

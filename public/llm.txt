@@ -1,0 +1,30 @@
+# Story to Manga Machine
+
+Transform written stories into stunning visual manga or comic book pages using AI.
+
+## What it does
+Story to Manga converts text stories into visual manga or comic book pages. Users write a story, choose a style (Japanese manga or American comic), and the AI generates consistent character designs and comic panels.
+
+## Features
+- Multi-style generation (Japanese manga or American comic book styles)
+- Import stories directly from Reddit URLs
+- Character consistency through AI-generated reference sheets
+- Progressive display showing generation process
+- Shareable social media images
+- Download individual panels or complete comic pages
+- Smart story processing and character identification
+
+## How to use
+1. Visit https://app.storytomanga.com
+2. Choose your preferred style (Manga or Comic)
+3. Paste your story (max 500 words)
+4. Watch the AI generate character designs and panels
+5. Download or share your finished manga
+
+## Best practices
+Stories work best when they are 200-500 words with clear character descriptions, focused plots, and dialogue-heavy scenes. Complex plots with many characters may not generate as well.
+
+## Links
+- Live App: https://app.storytomanga.com
+- GitHub: https://github.com/victorhuangwq/story-to-manga
+- Issues: https://github.com/victorhuangwq/story-to-manga/issues

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Allow all crawlers access to CSS, JS, and images
+Allow: /_next/static/
+Allow: /images/
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.gif$
+Allow: /*.svg$
+
+# Disallow crawling of API routes and private paths
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://app.storytomanga.com/sitemap.xml
