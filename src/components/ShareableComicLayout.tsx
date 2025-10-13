@@ -33,7 +33,7 @@ export default function ShareableComicLayout({
 
 		// Simplified preview version
 		return (
-			<div className="max-w-sm mx-auto bg-white p-3 rounded shadow-sm">
+			<div className="max-w-sm mx-auto bg-white p-3 rounded shadow-sm ph-no-capture">
 				<div className="aspect-square bg-gray-100 rounded flex flex-col">
 					<div className="text-center p-3 border-b">
 						<div className="text-sm font-semibold truncate">{title}</div>
@@ -99,6 +99,7 @@ export default function ShareableComicLayout({
 	return (
 		<div
 			ref={compositorRef}
+			className="ph-no-capture"
 			style={{
 				position: "fixed",
 				left: "-9999px",

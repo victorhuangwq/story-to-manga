@@ -26,7 +26,11 @@ export default function CharacterCard({
 	isRegenerating = false,
 }: CharacterCardProps) {
 	return (
-		<div className={showImage ? "text-center" : "card-manga"}>
+		<div
+			className={
+				showImage ? "text-center ph-no-capture" : "card-manga"
+			}
+		>
 			{showImage && character.image ? (
 				<>
 					<div className="relative">

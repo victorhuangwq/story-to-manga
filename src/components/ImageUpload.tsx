@@ -205,7 +205,7 @@ export default function ImageUpload({
 					<h5 className="font-medium text-manga-black">Uploaded Images:</h5>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 						{images.map((image) => (
-							<div key={image.id} className="card-manga">
+							<div key={image.id} className="card-manga ph-no-capture">
 								<div className="card-body p-3">
 									<div className="flex gap-3">
 										{/* Image Preview */}

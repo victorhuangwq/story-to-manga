@@ -29,7 +29,11 @@ export default function PanelCard({
 	isRegenerating = false,
 }: PanelCardProps) {
 	return (
-		<div className={showImage ? "text-center" : "card-manga"}>
+		<div
+			className={
+				showImage ? "text-center ph-no-capture" : "card-manga"
+			}
+		>
 			{showImage && panel.image ? (
 				<>
 					<div className="relative">
