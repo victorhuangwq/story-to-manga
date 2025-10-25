@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 		default: "Story to Manga Machine - AI Comic & Manga Generator",
 		template: "%s | Story to Manga Machine"
 	},
-	description: "Transform written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API. Create consistent characters, generate panels, and share your comics instantly.",
-	keywords: ["manga generator", "comic book creator", "AI comics", "story to manga", "visual storytelling", "Gemini AI", "comic panels", "character design"],
+	description: "Transform written stories into stunning visual manga or comic book pages using AI. Create consistent characters, generate panels, and share your comics instantly.",
+	keywords: ["manga generator", "comic book creator", "AI comics", "story to manga", "visual storytelling", "comic panels", "character design"],
 	authors: [{ name: "Story to Manga Team" }],
 	creator: "Story to Manga Machine",
 	publisher: "Story to Manga Machine",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 	},
 	openGraph: {
 		title: "Story to Manga Machine - AI Comic & Manga Generator",
-		description: "Transform written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API. Create consistent characters, generate panels, and share your comics instantly.",
+		description: "Transform written stories into stunning visual manga or comic book pages using AI. Create consistent characters, generate panels, and share your comics instantly.",
 		url: "https://app.storytomanga.com",
 		siteName: "Story to Manga Machine",
 		images: [
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 	twitter: {
 		card: "summary_large_image",
 		title: "Story to Manga Machine - AI Comic & Manga Generator",
-		description: "Transform written stories into stunning visual manga or comic book pages using Google's Gemini 2.5 Flash Image API.",
+		description: "Transform written stories into stunning visual manga or comic book pages using AI.",
 		images: ["/og-image.png"],
 		site: "@storytomanga",
 	},
