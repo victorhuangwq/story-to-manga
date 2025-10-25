@@ -13,29 +13,28 @@
 		"check": "npm run typecheck && npm run lint && npm run knip"
 	},
 	"dependencies": {
-		"@aws-sdk/client-bedrock-runtime": "3.893.0",
-		"@google/genai": "1.20.0",
-		"@next/third-parties": "15.5.3",
+		"@aws-sdk/client-bedrock-runtime": "3.917.0",
+		"@google/genai": "1.27.0",
+		"@next/third-parties": "16.0.0",
 		"html2canvas": "1.4.1",
 		"jszip": "3.10.1",
-		"next": "15.5.3",
-		"pino": "9.11.0",
-		"pino-pretty": "13.1.1",
-		"posthog-js": "^1.275.1",
-		"posthog-node": "^5.9.5",
-		"react": "19.1.1",
-		"react-dom": "19.1.1",
+		"next": "16.0.0",
+		"pino": "10.1.0",
+		"pino-pretty": "13.1.2",
+		"posthog-js": "1.280.1",
+		"react": "19.2.0",
+		"react-dom": "19.2.0",
 		"zustand": "5.0.8"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.2.4",
-		"@tailwindcss/postcss": "4.1.13",
-		"@types/node": "24.5.2",
-		"@types/react": "19.1.13",
-		"@types/react-dom": "19.1.9",
-		"knip": "5.63.1",
+		"@biomejs/biome": "2.3.0",
+		"@tailwindcss/postcss": "4.1.16",
+		"@types/node": "24.9.1",
+		"@types/react": "19.2.2",
+		"@types/react-dom": "19.2.2",
+		"knip": "5.66.2",
 		"postcss": "8.5.6",
-		"tailwindcss": "4.1.13",
-		"typescript": "5.9.2"
+		"tailwindcss": "4.1.16",
+		"typescript": "5.9.3"
 	}
 }
