@@ -1,4 +1,5 @@
 {
 	"ignore": ["tests/**/*.js"],
-	"ignoreDependencies": ["pino-pretty"]
+	"ignoreDependencies": ["pino-pretty"],
+	"entry": ["src/proxy.ts"]
 }

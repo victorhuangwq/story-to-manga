@@ -13,7 +13,8 @@
 			"**/*.jsx",
 			"**/*.tsx",
 			"**/*.svelte",
-			"**/*.json"
+			"**/*.json",
+			"!!tsconfig.json"
 		]
 	},
 	"formatter": {

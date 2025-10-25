@@ -30,7 +30,7 @@ function getEndpointName(pathname: string): string {
 	return apiMatch?.[1] ?? "unknown";
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
 	const url = request.nextUrl.clone();
 	const hostname = request.headers.get("host") || "";
 	const pathname = url.pathname;
