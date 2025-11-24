@@ -32,9 +32,6 @@ importers:
       pino-pretty:
         specifier: 13.1.2
         version: 13.1.2
-      posthog-js:
-        specifier: 1.280.1
-        version: 1.280.1
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -135,6 +132,7 @@ packages:
   '@aws-sdk/credential-provider-web-identity@3.917.0':
     resolution: {integrity: sha512-pZncQhFbwW04pB0jcD5OFv3x2gAddDYCVxyJVixgyhSw7bKCYxqu6ramfq1NxyVpmm+qsw+ijwi/3cCmhUHF/A==}
     engines: {node: '>=18.0.0'}
+    deprecated: This version contains a compilation TypeScript error https://github.com/aws/aws-sdk-js-v3/issues/7457 - please use @aws-sdk/credential-providers@3.918.0 or higher
 
   '@aws-sdk/eventstream-handler-node@3.914.0':
     resolution: {integrity: sha512-S4Zf+N6xrfQk0Fox+eWftbSqlXh9DUPjuXSbFXwneP7yEJ0+KbbRFsci84MQapNKa5IPb+Kt/li5i7Zp9B4qIw==}
@@ -595,9 +593,6 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@posthog/core@1.3.1':
-    resolution: {integrity: sha512-sGKVHituJ8L/bJxVV4KamMFp+IBWAZyCiYunFawJZ4cc59PCtLnKFIMEV6kn7A4eZQcQ6EKV5Via4sF3Z7qMLQ==}
-
   '@smithy/abort-controller@4.2.3':
     resolution: {integrity: sha512-xWL9Mf8b7tIFuAlpjKtRPnHrR8XVrwTj5NPYO/QwZPtc0SDLsPxb56V5tzi5yspSMytISHybifez+4jlrx0vkQ==}
     engines: {node: '>=18.0.0'}
@@ -935,9 +930,6 @@ packages:
   colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
 
-  core-js@3.46.0:
-    resolution: {integrity: sha512-vDMm9B0xnqqZ8uSBpZ8sNtRtOdmfShrvT6h2TuQGLs0Is+cR0DYbj/KWP6ALVNbWPpqA/qPLoOuppJN07humpA==}
-
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
 
@@ -1007,9 +999,6 @@ packages:
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
-
-  fflate@0.4.8:
-    resolution: {integrity: sha512-FJqqoDBR00Mdj9ppamLa/Y7vxm+PRmNWA67N846RvsoYVMKB4q3y/de5PA7gUmRMYK/8CMz2GDZQmCRN1wBcWA==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -1286,12 +1275,6 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  posthog-js@1.280.1:
-    resolution: {integrity: sha512-ZfXaExn42aZBQg88pBzGo71sy4hmei3ubBPb7DBbsfYC3ipZ6F6xmNr3ScNdOyF8cBTZbG24SlIvntp83jTlUA==}
-
-  preact@10.27.2:
-    resolution: {integrity: sha512-5SYSgFKSyhCbk6SrXyMpqjb5+MQBgfvEKE/OC+PujcY34sOpqtr+0AZQtPYx5IA6VxynQ7rUPCtKzyovpj9Bpg==}
-
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
 
@@ -1444,9 +1427,6 @@ packages:
   web-streams-polyfill@3.3.3:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
     engines: {node: '>= 8'}
-
-  web-vitals@4.2.4:
-    resolution: {integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==}
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
@@ -2169,8 +2149,6 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@posthog/core@1.3.1': {}
-
   '@smithy/abort-controller@4.2.3':
     dependencies:
       '@smithy/types': 4.8.0
@@ -2591,8 +2569,6 @@ snapshots:
 
   colorette@2.0.20: {}
 
-  core-js@3.46.0: {}
-
   core-util-is@1.0.3: {}
 
   css-line-break@2.1.0:
@@ -2657,8 +2633,6 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
-
-  fflate@0.4.8: {}
 
   fill-range@7.1.1:
     dependencies:
@@ -2975,16 +2949,6 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  posthog-js@1.280.1:
-    dependencies:
-      '@posthog/core': 1.3.1
-      core-js: 3.46.0
-      fflate: 0.4.8
-      preact: 10.27.2
-      web-vitals: 4.2.4
-
-  preact@10.27.2: {}
-
   process-nextick-args@2.0.1: {}
 
   process-warning@5.0.0: {}
@@ -3126,8 +3090,6 @@ snapshots:
   walk-up-path@4.0.0: {}
 
   web-streams-polyfill@3.3.3: {}
-
-  web-vitals@4.2.4: {}
 
   wrappy@1.0.2: {}
 
