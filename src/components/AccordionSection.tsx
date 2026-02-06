@@ -48,10 +48,18 @@ export default function AccordionSection({
 				</button>
 			</h2>
 			<div
-				className="accordion-body"
-				style={{ display: isOpen ? "block" : "none" }}
+				className={`accordion-body overflow-hidden transition-all duration-300 ease-out ${
+					isOpen
+						? "max-h-[5000px] opacity-100"
+						: "max-h-0 opacity-0 py-0 border-0"
+				}`}
+				style={{
+					display: isOpen ? "block" : "none",
+				}}
 			>
-				{children}
+				<div className={`transition-transform duration-300 ${isOpen ? "translate-y-0" : "-translate-y-2"}`}>
+					{children}
+				</div>
 			</div>
 		</div>
 	);

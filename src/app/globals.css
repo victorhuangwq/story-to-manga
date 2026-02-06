@@ -55,3 +55,416 @@ body {
   background: var(--color-manga-off-white);
   color: var(--color-manga-charcoal);
 }
+
+/* ===== TEXTURED BACKGROUNDS ===== */
+
+/* Manga Style - Subtle aged paper effect */
+.style-manga {
+  background:
+    linear-gradient(180deg, #FAF8F5 0%, #F5F0E8 50%, #EDE8E0 100%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+/* Very subtle paper grain for manga */
+.style-manga::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.style-manga > *:not(.floating-report-btn):not(.modal-overlay):not(.image-modal-overlay):not(.confirmation-modal-overlay) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure floating elements stay above background effects */
+.style-manga .floating-report-btn {
+  z-index: 1000;
+}
+
+/* Comic Style - Subtle halftone with warm gradient */
+.style-comic {
+  background:
+    radial-gradient(circle at center, rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(135deg, #FFFEF8 0%, #FFF9E8 50%, #FFF5D6 100%);
+  background-size: 6px 6px, 100% 100%;
+  background-attachment: fixed;
+}
+
+/* Subtle corner accent for comic style */
+.style-comic::before {
+  content: '';
+  position: fixed;
+  top: -200px;
+  right: -200px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255,107,107,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.style-comic::after {
+  content: '';
+  position: fixed;
+  bottom: -200px;
+  left: -200px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(78,205,196,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.style-comic > *:not(.floating-report-btn):not(.modal-overlay):not(.image-modal-overlay):not(.confirmation-modal-overlay) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure floating elements stay above background effects */
+.style-comic .floating-report-btn {
+  z-index: 1000;
+}
+
+/* ===== PAGE LOAD ANIMATIONS ===== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Staggered reveal for accordion items */
+.accordion-manga .accordion-item {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+.accordion-manga .accordion-item:nth-child(1) { animation-delay: 0.1s; }
+.accordion-manga .accordion-item:nth-child(2) { animation-delay: 0.2s; }
+.accordion-manga .accordion-item:nth-child(3) { animation-delay: 0.3s; }
+.accordion-manga .accordion-item:nth-child(4) { animation-delay: 0.4s; }
+.accordion-manga .accordion-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* Main panels staggered animation */
+.comic-panel {
+  animation: fadeInScale 0.6s ease-out both;
+}
+
+/* Use data attributes for staggered panel delays */
+.comic-panel[data-delay="1"] {
+  animation-delay: 0.05s;
+}
+
+.comic-panel[data-delay="2"] {
+  animation-delay: 0.15s;
+}
+
+/* ===== PANEL REVEAL ANIMATIONS ===== */
+
+@keyframes panelStamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.3) rotate(-3deg);
+  }
+  50% {
+    transform: scale(0.98) rotate(1deg);
+  }
+  70% {
+    transform: scale(1.02) rotate(-0.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes panelSlideReveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px) scale(0.9);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes characterReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.8);
+  }
+  60% {
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Comic style uses dramatic stamp effect */
+.style-comic .panel-reveal {
+  animation: panelStamp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Manga style uses elegant slide reveal */
+.style-manga .panel-reveal {
+  animation: panelSlideReveal 0.5s ease-out both;
+}
+
+/* Character card reveal animation */
+.character-reveal {
+  animation: characterReveal 0.5s ease-out both;
+}
+
+/* Staggered panel reveals */
+.panel-reveal:nth-child(1) { animation-delay: 0s; }
+.panel-reveal:nth-child(2) { animation-delay: 0.1s; }
+.panel-reveal:nth-child(3) { animation-delay: 0.2s; }
+.panel-reveal:nth-child(4) { animation-delay: 0.15s; }
+.panel-reveal:nth-child(5) { animation-delay: 0.25s; }
+.panel-reveal:nth-child(6) { animation-delay: 0.2s; }
+.panel-reveal:nth-child(7) { animation-delay: 0.3s; }
+.panel-reveal:nth-child(8) { animation-delay: 0.25s; }
+
+/* Staggered character reveals */
+.character-reveal:nth-child(1) { animation-delay: 0s; }
+.character-reveal:nth-child(2) { animation-delay: 0.12s; }
+.character-reveal:nth-child(3) { animation-delay: 0.24s; }
+.character-reveal:nth-child(4) { animation-delay: 0.36s; }
+.character-reveal:nth-child(5) { animation-delay: 0.48s; }
+
+/* ===== GENERATE BUTTON ENHANCEMENT ===== */
+
+@keyframes subtlePulse {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Manga style - subtle elegant pulse */
+.style-manga .btn-manga-primary:not(:disabled):not(:hover) {
+  animation: subtlePulse 3s ease-in-out infinite;
+}
+
+/* Comic style - bold action feel */
+@keyframes comicPulse {
+  0%, 100% {
+    box-shadow:
+      0 4px 0 var(--color-manga-black),
+      0 6px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow:
+      0 6px 0 var(--color-manga-black),
+      0 8px 25px rgba(0, 0, 0, 0.35);
+    transform: translateY(-2px);
+  }
+}
+
+.style-comic .btn-manga-primary:not(:disabled):not(:hover) {
+  animation: comicPulse 2s ease-in-out infinite;
+}
+
+/* ===== LOADING STATE ENHANCEMENTS ===== */
+
+@keyframes spinnerGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite, spinnerGlow 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== CARD HOVER ENHANCEMENTS ===== */
+
+.style-manga .card-manga {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.style-manga .card-manga:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.style-comic .card-manga {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.style-comic .card-manga:hover {
+  transform: translateY(-3px) rotate(-0.5deg);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== REFINED CONTAINER STYLING ===== */
+
+/* Manga style containers - clean, minimal, Japanese aesthetic */
+.style-manga .comic-panel {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FDFCFA 100%);
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.05),
+    0 2px 8px rgba(0,0,0,0.04);
+  position: relative;
+}
+
+/* Subtle ink wash accent on left edge for manga */
+.style-manga .comic-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    var(--color-manga-accent-red) 0%,
+    var(--color-manga-accent-gold) 50%,
+    var(--color-manga-accent-red) 100%
+  );
+  opacity: 0.8;
+}
+
+/* Comic style containers - bold, dynamic, pop-art feel */
+.style-comic .comic-panel {
+  background: #FFFFFF;
+  border: 3px solid #1a1a1a;
+  border-radius: 8px;
+  box-shadow:
+    4px 4px 0 #1a1a1a,
+    0 8px 24px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+/* Dynamic corner accent for comic panels */
+.style-comic .comic-panel::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #FFE135 50%, transparent 50%);
+  border-radius: 0 6px 0 0;
+  z-index: 1;
+}
+
+/* ===== ACCORDION REFINEMENTS ===== */
+
+/* Manga accordion - clean lines */
+.style-manga .accordion-manga .accordion-item {
+  background: #FFFFFF;
+  border: 1px solid #2a2a2a;
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  overflow: hidden;
+}
+
+.style-manga .accordion-manga .accordion-button {
+  background: linear-gradient(90deg, #FAFAFA 0%, #FFFFFF 100%);
+  border-bottom: 1px solid #eee;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.style-manga .accordion-manga .accordion-button:hover {
+  background: linear-gradient(90deg, #F5F5F5 0%, #FAFAFA 100%);
+}
+
+/* Comic accordion - bold and fun */
+.style-comic .accordion-manga .accordion-item {
+  background: #FFFFFF;
+  border: 2px solid #1a1a1a;
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  overflow: hidden;
+}
+
+.style-comic .accordion-manga .accordion-button {
+  background: #1a1a1a;
+  color: #FFFFFF;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.style-comic .accordion-manga .accordion-button:hover {
+  background: #2a2a2a;
+}
+
+/* ===== FORM REFINEMENTS ===== */
+
+/* Manga textarea - subtle, focused */
+.style-manga .form-control-manga {
+  background: #FEFEFE;
+  border: 1px solid #ccc;
+  border-left: 3px solid var(--color-manga-accent-red);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.style-manga .form-control-manga:focus {
+  background: #FFFFFF;
+  border-color: #999;
+  border-left-color: var(--color-manga-accent-gold);
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.08);
+  outline: none;
+}
+
+/* Comic textarea - bold borders */
+.style-comic .form-control-manga {
+  background: #FFFEF8;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.style-comic .form-control-manga:focus {
+  background: #FFFFFF;
+  box-shadow:
+    3px 3px 0 #1a1a1a,
+    0 0 0 3px rgba(255, 225, 53, 0.3);
+  outline: none;
+}

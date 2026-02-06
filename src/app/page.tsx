@@ -539,7 +539,7 @@ export default function Home() {
 			<div className="flex flex-col lg:flex-row gap-4 h-full">
 				{/* Left Panel - Input */}
 				<div className="w-full lg:w-1/3 mb-4 lg:mb-0">
-					<div className="comic-panel h-full">
+					<div className="comic-panel h-full" data-delay="1">
 						<h1 className="text-2xl text-center mb-2">
 							Story to {style === "manga" ? "Manga" : "Comic"} Generator
 						</h1>
@@ -861,7 +861,7 @@ export default function Home() {
 
 				{/* Right Panel - Generation Results */}
 				<div className="w-full lg:w-2/3">
-					<div className="comic-panel h-full">
+					<div className="comic-panel h-full" data-delay="2">
 						<div className="flex justify-between items-center mb-4">
 							<h2 className="text-xl">Behind the Scenes</h2>
 							<button
